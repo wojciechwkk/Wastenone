@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<title>WasteNone</title>
+		<link rel="stylesheet" href="styles.css">
+		<link rel="icon" type="images/png" href="images/favicon.png">
+		<link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css?family=Nothing+You+Could+Do" rel="stylesheet"> 
+		<meta charset="utf-8"/>
+		<script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-auth.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-storage.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-database.js"></script>
+    </head>
+    <body>
+
+		<!------------------------------------------ email non verified notification ------------------------------------------>
+		<div id="email-not-verified-notification" class="hide"></div>
+		<!-- email non verified notification -->
+
+        <!---------------------------------------------------- Header ---------------------------------------------------->
+        <div id="header">
+            <div>
+                <img id="logo" src="images/wastenone.png" alt="logo">
+            </div>
+            <div class="hide-when-logged-in">
+                <span id="log-in-link-header" class="auth" auth="show-log-in-form">Log In</span>
+                <button id="create-user-link-header" class="auth" auth="show-create-user-form">Create User</button>
+            </div>
+            <div class="hide-when-logged-out hide" id="user-details-header">
+                <img id="profile-photo-header" src="images/user.png" alt="user"> <h1 id="display-name"></h1>
+            </div>
+        </div>
+		<!-- Header -->
+
+		<!---------------------------------------------------- Hero Banner ---------------------------------------------------->
+		<img src="images/hero-banner.png" alt="hero banner" class="hide-when-logged-in" >
+		<!-- Hero Banner -->
+
+		<!---------------------------------------------------- Dashboard ---------------------------------------------------->
+		<div id="dashboard" class="hide-when-logged-out hide">
+			<div class="hide-when-logged-out hide">
+				<form action="" id="fridge-list-form">
+					<h1>New fridge item</h1>
+					<input type="date" id="expiryDate" placeholder="Task", autocomplete="off">
+					<input type="text" id="item" placeholder="Task", required autocomplete="off">
+					<button type="submit">Add</button>
+				</form>
+			</div>
+			<div class="hide-when-logged-out hide">
+				<h1>Fridge List</h1>
+				<div id="fridge-list-items"></div>
+			</div>
+			<div class="hide-when-logged-out hide">
+				<div id="account"> 
+					<h1>Account</h1>
+					<img id="profile-photo-account" src="images/user.png" alt="user">
+					<div id="progress-bar"></div>
+					<input type="file" id="upload-profile-photo-button" accept="image/x-png,image/gif,image/jpeg">
+
+					<button class="auth" auth="log-out">Log Out</button>
+					
+					<div id="show-delete-account-dialog-trigger" class="auth" auth="show-delete-account-dialog">Delete account</div>
+					<div id="delete-account-dialog" class="hide">
+						<p>Are you sure you wante to delete your account</p>
+						<button id="delete-account" class="auth" auth="delete-account">Delete</button>
+						<button id="hide-delete-account-dialog-trigger" class="auth" auth="hide-delete-account-dialog">Cancel</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+
+		<!---------------------------------------------------- Footer ---------------------------------------------------->
+		<div id="footer">
+			<div>
+				<p>
+					<b>About</b><br>
+					<i>Expertly Authenticate Users</i>
+				</p>
+			</div>
+			<div>
+				<p>
+					<b>Firebase</b><br>
+					<i>Authentication, Hosting, Database, Storage</i>
+				</p>
+			</div>
+			<div>
+				<p>
+					<b>Language</b><br>
+					<i>JavaScript</i>
+				</p>
+			</div>
+		</div>
+		<!-- Footer -->
+	
+
+		<!---------------------------------------------------- Modal ---------------------------------------------------->
+		<div id="modal">
+			<div id="modal-content">
+				<button id="close">&times</button>
+				<!-- Auth -->
+				<div id="authentication">
+
+					<!-- OAuth -->
+					<div id="oauth-providers">
+						<div id="oauth-providers-grid">
+							<img src="images/oauth-providers/google.png" alt="Google" class="auth" auth="log-in-with-google" id="google-pic">
+							<img src="images/oauth-providers/twitter.png" alt="Twitter" class="auth" auth="log-in-with-twitter"> 
+							<img src="images/oauth-providers/github.png" alt="Github" class="auth" auth="log-in-with-github">
+						</div>
+						<div id="or">
+							<p>or</p>
+						</div>
+					</div>
+
+					<!-- OAuth -->
+
+					<!-- Create User Form-->
+					<form id="create-user-form">
+						<div id="create-user-inputs">
+							<input type="text" id="create-user-display-name" placeholder="Display Name" required autocomplete="off"> 
+							<input type="text" id="create-user-email" placeholder="Email" required autocomplete="off"> 
+							<input type="password" id="create-user-password" placeholder="Password" required autocomplete="off"> 
+						</div>
+						<button type="submit" id="create-user-button">Create User</button>
+					</form>
+					<!-- create user form -->
+					
+					<!-- Login form -->
+					<form id="log-in-form">
+						<div id="log-in-inputs">
+							<input type="text" id="log-in-email" placeholder="Email" required autocomplete="off"> 
+							<input type="password" id="log-in-password" placeholder="Password" required autocomplete="off"> 
+							
+						</div>
+
+						<div id="forgot-password-link" class="auth" auth="show-forgot-password-form">Forgot?</div>
+						<button type="submit" id="log-in-button">Log in</button>
+					</form>
+					<!-- login form -->
+					
+					<!-- Forgot password form -->
+					<form id="forgot-password-form">
+						<div id="forgot-password-inputs">
+							<input type="text" id="forgot-password-email" placeholder="Email" required autocomplete="off"> 
+						</div>
+						<button type="submit" id="forgot-password-button">Reset Password</button>
+					</form>
+					<!-- Forgot password form -->
+
+					<!-- Succes and error msgs -->
+					<div id="message"></div>
+					<!-- Succes and error msgs -->
+
+					<!-- Loading visual cue -->
+					<div id="loading-outer-container">
+						<div id="loading-inner-container">
+							<div id="circle1"></div>
+							<div id="circle2"></div>
+						</div>
+					</div>
+					<!-- Loading visual cue -->
+
+					<!-- have or need account -->
+					<div id="have-or-need-account-dialog">
+						<p id="create-user-dialog">
+							Don't have an account? 
+							<span id="create-user-link" class="auth" auth="show-create-user-form">Create User</span>
+						</p>
+
+						<p id="log-in-dialog">
+							Already have an account? 
+							<span id="log-in-link" class="auth" auth="show-log-in-form">Log in</span>
+						</p>
+					</div>
+					<!-- login form -->
+				</div>
+				<!-- Auth -->
+			</div>
+		</div>
+		<!-- Modal -->
+	
+        <script src="app.js" charset="utf-8"></script>
+    </body>
+</html>
+
+
