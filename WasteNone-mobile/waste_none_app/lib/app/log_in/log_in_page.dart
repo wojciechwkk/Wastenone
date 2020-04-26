@@ -1,9 +1,32 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/services/firebase_auth.dart';
 
 import 'log_in_button.dart';
 import 'social_log_in_button.dart';
 
 class LogInPage extends StatelessWidget {
+  LogInPage({@required this.auth});
+
+  final AuthBase auth;
+
+  Future<void> _logInAnonymously() async {
+    try {
+      await auth.logInAnonymously();
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+  Future<void> _logInWithGoogle() async {
+    try {
+      await auth.logInWihGoogle();
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,36 +46,28 @@ class LogInPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-/*          Text(
-            'Log In',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 30.0,
-              fontWeight: FontWeight.w600,
-            ),
-          ),*/
-          SizedBox(
-              height: 70,
-              child: Image.asset('images/wastenone.png')),
-          SizedBox(height: 40.0),
+          SizedBox(height: 70, child: Image.asset('images/wastenone.png')),
+          SizedBox(height: 140.0),
           Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                SocialLogInButton( //'Log in with Google',
+                SocialLogInButton(
+                    //'Log in with Google',
                     assetPic: 'images/google.png',
-                    height: 80,
-                    onPressed: () => _LogInWithGoogle()),
-                SocialLogInButton( //'Log in with Twitter',
+                    height: 60,
+                    onPressed: _logInWithGoogle),
+                SocialLogInButton(
+                    //'Log in with Twitter',
                     assetPic: 'images/twitter.png',
-                    height: 80,
+                    height: 60,
                     onPressed: () {}),
-                SocialLogInButton( //'Log in with Github',
-                  assetPic: 'images/github.png',
-                  height: 80,
-                  onPressed: () {},
-                ),
+                SocialLogInButton(
+                    //'Log in with Github',
+                    assetPic: 'images/github.png',
+                    height: 60,
+                    onPressed: () {}),
               ]),
-          SizedBox(height: 16.0),
+          SizedBox(height: 26.0),
           LogInButton(
             text: 'Log in with email',
             textColor: Colors.white,
@@ -73,22 +88,10 @@ class LogInPage extends StatelessWidget {
             text: 'Check it out without authentication',
             textColor: Colors.black,
             color: Colors.grey[200],
-            onPressed: () {},
+            onPressed: _logInAnonymously,
           ),
         ],
       ),
     );
   }
 }
-
-class _LogInWithGoogle {}
-//child: Text(
-//'Log in with Google',
-//style: TextStyle(color: Colors.black87),
-//),
-//shape: RoundedRectangleBorder(
-//borderRadius: BorderRadius.all(
-//Radius.circular(20.0),
-//),
-//),
-//onPressed: () {});
