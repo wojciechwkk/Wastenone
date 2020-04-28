@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/services/auth.dart';
 import 'package:waste_none_app/services/firebase_auth.dart';
@@ -17,11 +18,12 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('WasteNone'), actions: <Widget>[
+      appBar: AppBar(title: Text('Hi, ${auth.currentUser()}'), actions: <Widget>[
         FlatButton(
             child: Text('Logout', style: TextStyle(fontSize: 18)),
             onPressed: _logOut)
       ]),
+
     );
   }
 }
