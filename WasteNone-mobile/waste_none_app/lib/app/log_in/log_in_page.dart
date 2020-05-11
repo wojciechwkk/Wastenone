@@ -24,6 +24,22 @@ class LogInPage extends StatelessWidget {
       print(e.toString());
     }
   }
+  Future<void> _logInWithTwitter() async {
+    try {
+      await auth.logInWihTwitter();
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+  Future<void> _logInWithGithub() async {
+    try {
+      await auth.logInWihGithub();
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +76,12 @@ class LogInPage extends StatelessWidget {
                     //'Log in with Twitter',
                     assetPic: 'images/twitter.png',
                     height: 60,
-                    onPressed: () {}),
+                    onPressed: _logInWithTwitter),
                 SocialLogInButton(
                     //'Log in with Github',
                     assetPic: 'images/github.png',
                     height: 60,
-                    onPressed: () {}),
+                    onPressed: _logInWithGithub),
               ]),
           SizedBox(height: 26.0),
           LogInWithEmailForm(

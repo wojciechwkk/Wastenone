@@ -12,11 +12,11 @@ class LandingSemaphorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User>(
+    return StreamBuilder<WasteNoneUser>(
       stream: auth.onAuthStateChange,
       builder: (context, snapshot){
         if( snapshot.connectionState == ConnectionState.active ){
-          User user = snapshot.data;
+          WasteNoneUser user = snapshot.data;
           if (user == null) {
             return LogInPage(
               auth: auth,

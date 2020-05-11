@@ -1,19 +1,21 @@
 
 import 'package:flutter/foundation.dart';
 
-class User{
-  User({@required this.uid});
+class WasteNoneUser{
+  WasteNoneUser({@required this.uid});
   final String uid;
 }
 
 abstract class AuthBase {
-  Stream<User> get onAuthStateChange;
-  Future<User> currentUser();
+  Stream<WasteNoneUser> get onAuthStateChange;
+  Future<WasteNoneUser> currentUser();
   Future<String> getCurrentUsersDisplayName();
-  Future<User> createUser(String email, String password, String displayName );
-  Future<User> logInAnonymously();
-  Future<User> logInWithEmailAndPassword(String email, String password);
-  Future<User> logInWihGoogle();
+  Future<WasteNoneUser> createUser(String email, String password, String displayName );
+  Future<WasteNoneUser> logInAnonymously();
+  Future<WasteNoneUser> logInWithEmailAndPassword(String email, String password);
+  Future<WasteNoneUser> logInWihGoogle();
+  Future<WasteNoneUser> logInWihTwitter();
+  Future<WasteNoneUser> logInWihGithub();
   Future<void> logOut();
 
 }
