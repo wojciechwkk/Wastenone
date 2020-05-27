@@ -6,8 +6,7 @@ class SocialLogInButton extends StatelessWidget {
     @required this.assetPic,
     this.height,
     this.onPressed,
-  })  :
-        assert(assetPic != null);
+  }) : assert(assetPic != null);
 
   final String assetPic;
   final double height;

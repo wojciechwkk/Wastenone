@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:waste_none_app/app/log_in/validators.dart';
+import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/form_submit_button.dart';
 import 'package:waste_none_app/services/auth.dart';
-
-import 'log_in_button.dart';
 
 enum LogInWithEmailFormType { logIn, createUser }
 
@@ -32,9 +30,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
   final FocusNode _passwordFocusNode = FocusNode();
 
   String get _email => _emailController.text.trim();
-
   String get _password => _passwordController.text.trim();
-
   String get _displayName => _displayNameController.text.trim();
 
   LogInWithEmailFormType _formType = LogInWithEmailFormType.logIn;
@@ -70,11 +66,11 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
   }
 
   void _updateState() {
-    setState(() {});
-    _isEmailEdited = true;
-    _isPasswordEdited = true;
-    _isDisplayNameEdited = true;
-
+    setState(() {
+      _isEmailEdited = true;
+      _isPasswordEdited = true;
+      _isDisplayNameEdited = true;
+    });
   }
 
   void _toggleFormType() {
@@ -109,17 +105,15 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
   }
 
   Container _buildContent() {
-//  Widget build(BuildContext context) {
-
     bool submitEnabled = widget.emailValidator.isValid(_email) &&
         widget.passwordValidator.isValid(_password) &&
         ((_formType == LogInWithEmailFormType.createUser) ==
             widget.displayNameValidator.isValid(_displayName)) &&
         !_isLoading;
 
-    final primaryText =
+    final submitButtonText =
         _formType == LogInWithEmailFormType.logIn ? 'Log in' : 'Create User';
-    final secondaryText = _formType == LogInWithEmailFormType.logIn
+    final toggleFormTypeButtonText = _formType == LogInWithEmailFormType.logIn
         ? "Don\'t have an account? Create User"
         : 'Already have an account? Log in';
     return Container(
@@ -130,11 +124,11 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
           _buildPasswordWidget(),
           SizedBox(height: 8.0),
           FormSubmitButton(
-            text: primaryText,
+            text: submitButtonText,
             onPressed: submitEnabled ? _submit : null,
           ),
           FlatButton(
-            child: Text(secondaryText),
+            child: Text(toggleFormTypeButtonText),
             onPressed: _toggleFormType,
           )
         ]));

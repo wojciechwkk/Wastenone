@@ -1,7 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_github_api/entity/basic_auth_param.dart';
-import 'package:flutter_github_api/flutter_github_api.dart';
 import 'package:flutter_twitter_login/flutter_twitter_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,7 +10,9 @@ class WNFirebaseAuth implements AuthBase {
   var _firebaseAuth = FirebaseAuth.instance;
 
   WasteNoneUser _userFromFirebase(FirebaseUser user) {
-    return (user == null) ? null : new WasteNoneUser(uid: user.uid);
+    return (user == null)
+        ? null
+        : new WasteNoneUser(uid: user.uid, displayName: user.displayName);
   }
 
   @override
@@ -24,12 +24,6 @@ class WNFirebaseAuth implements AuthBase {
   Future<WasteNoneUser> currentUser() async {
     final user = await _firebaseAuth.currentUser();
     return _userFromFirebase(user);
-  }
-
-  @override
-  Future<String> getCurrentUsersDisplayName() async {
-    final user = await _firebaseAuth.currentUser();
-    return user.displayName;
   }
 
   @override
@@ -170,7 +164,5 @@ class WNFirebaseAuth implements AuthBase {
       print("CANNOT LAUNCH THIS URL!");
     }
   }
-
-
 }
 //  ------------------------------ Github  -------------------------------------

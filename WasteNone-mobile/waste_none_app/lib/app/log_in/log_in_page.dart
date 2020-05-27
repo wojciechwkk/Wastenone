@@ -17,6 +17,7 @@ class LogInPage extends StatelessWidget {
       print(e.toString());
     }
   }
+
   Future<void> _logInWithGoogle() async {
     try {
       await auth.logInWihGoogle();
@@ -24,6 +25,7 @@ class LogInPage extends StatelessWidget {
       print(e.toString());
     }
   }
+
   Future<void> _logInWithTwitter() async {
     try {
       await auth.logInWihTwitter();
@@ -31,6 +33,7 @@ class LogInPage extends StatelessWidget {
       print(e.toString());
     }
   }
+
   Future<void> _logInWithGithub() async {
     try {
       await auth.logInWihGithub();
@@ -38,8 +41,6 @@ class LogInPage extends StatelessWidget {
       print(e.toString());
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -56,55 +57,46 @@ class LogInPage extends StatelessWidget {
   SingleChildScrollView _buildContent() {
     return SingleChildScrollView(
       child: Container(
-      color: Colors.white,
-      padding: EdgeInsets.all(50),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          SizedBox(height: 70, child: Image.asset('images/wastenone.png')),
-          SizedBox(height: 100.0),
-          Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                SocialLogInButton(
-                    //'Log in with Google',
-                    assetPic: 'images/google.png',
-                    height: 60,
-                    onPressed: _logInWithGoogle),
-                SocialLogInButton(
-                    //'Log in with Twitter',
-                    assetPic: 'images/twitter.png',
-                    height: 60,
-                    onPressed: _logInWithTwitter),
-                SocialLogInButton(
-                    //'Log in with Github',
-                    assetPic: 'images/github.png',
-                    height: 60,
-                    onPressed: _logInWithGithub),
-              ]),
-          SizedBox(height: 26.0),
-          LogInWithEmailForm(
+        color: Colors.white,
+        padding: EdgeInsets.all(50),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            SizedBox(height: 70, child: Image.asset('images/wastenone.png')),
+            SizedBox(height: 100.0),
+            Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  SocialLogInButton(
+                      //'Log in with Google',
+                      assetPic: 'images/google.png',
+                      height: 60,
+                      onPressed: _logInWithGoogle),
+                  SocialLogInButton(
+                      //'Log in with Twitter',
+                      assetPic: 'images/twitter.png',
+                      height: 60,
+                      onPressed: _logInWithTwitter),
+                  SocialLogInButton(
+                      //'Log in with Github',
+                      assetPic: 'images/github.png',
+                      height: 60,
+                      onPressed: _logInWithGithub),
+                ]),
+            SizedBox(height: 26.0),
+            LogInWithEmailForm(
               auth: auth,
-          ),
-          SizedBox(height: 8.0),
-//          Text(
-//            'or',
-//            textAlign: TextAlign.center,
-//            style: TextStyle(
-//              fontSize: 15.0,
-//              fontWeight: FontWeight.w600,
-//            ),
-//          ),
-          SizedBox(height: 8.0),
-          LogInButton(
-            text: 'Check it out without authentication',
-            textColor: Colors.black,
-            color: Colors.grey[200],
-            onPressed: _logInAnonymously,
-          ),
-        ],
-      ),
+            ),
+            SizedBox(height: 16.0),
+            LogInButton(
+              text: 'Check it out without authentication',
+              textColor: Colors.black,
+              color: Colors.grey[200],
+              onPressed: _logInAnonymously,
+            ),
+          ],
+        ),
       ),
     );
   }
