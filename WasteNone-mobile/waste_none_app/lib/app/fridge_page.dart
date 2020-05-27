@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:waste_none_app/app/scan_and_add/scan_and_add.dart';
+import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
 import 'package:waste_none_app/services/auth.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
@@ -95,16 +96,8 @@ class FridgePageState extends State<FridgePage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget loadingIndicator = _loadingUserData
-        ? new Container(
-            color: Colors.grey[300],
-            width: 70.0,
-            height: 70.0,
-            child: new Padding(
-                padding: const EdgeInsets.all(5.0),
-                child: new Center(child: new CircularProgressIndicator())),
-          )
-        : new Container();
+    Widget loadingIndicator =
+        _loadingUserData ? LoadingIndicator() : Container();
 
     return Scaffold(
       appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
