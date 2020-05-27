@@ -28,11 +28,13 @@ class FridgePageState extends State<FridgePage> {
 
   final AuthBase auth;
   final WNFirebaseDB db;
+
   WasteNoneUser user;
   String fridgeID;
   int fridgeItemCount = 0;
   List<FridgeItem> usersFridgeItems;
   Map<String, Product> usersProducts;
+  bool _loadingUserData = false;
 
   int usersFridgeNo = 1; //default value ugly hardcode
   String welcomeText = "WasteNone";
@@ -42,6 +44,7 @@ class FridgePageState extends State<FridgePage> {
   @override
   initState() {
     super.initState();
+    _loadingUserData = true;
     _fetchUserdata().then((value) => _fetchUserFridgeData());
   }
 
@@ -52,8 +55,10 @@ class FridgePageState extends State<FridgePage> {
     print('Hi, $displayName');
 
     setState(() {
-      welcomeText = "Hi, $displayName";
-      fridgeID = "$usersUID-$usersFridgeNo";
+      if (mounted) {
+        welcomeText = "Hi, $displayName";
+        fridgeID = "$usersUID-$usersFridgeNo";
+      }
     });
   }
 
@@ -75,42 +80,66 @@ class FridgePageState extends State<FridgePage> {
       }
     }
     setState(() {
-      usersFridgeItems = fetchedFridgeItems;
-      fridgeItemCount = usersFridgeItems?.length;
-      usersProducts = products;
+      if (mounted) {
+        usersFridgeItems = fetchedFridgeItems;
+        fridgeItemCount = usersFridgeItems?.length;
+        usersProducts = products;
+        _loadingUserData = false;
+      }
     });
   }
 
   //---------------------------- /initial load data ----------------------------
 
   //---------------------------- flutter widgets -------------------------------
+
   @override
   Widget build(BuildContext context) {
+    Widget loadingIndicator = _loadingUserData
+        ? new Container(
+            color: Colors.grey[300],
+            width: 70.0,
+            height: 70.0,
+            child: new Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: new Center(child: new CircularProgressIndicator())),
+          )
+        : new Container();
+
     return Scaffold(
       appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
         FlatButton(
             child: Text('Logout', style: TextStyle(fontSize: 18)),
             onPressed: _logOut)
       ]),
-      body: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: ListView.builder(
-            itemCount: fridgeItemCount,
-            itemBuilder: (BuildContext context, int index) {
-              if (usersFridgeItems != null) {
-                Product productDetails =
-                    usersProducts[usersFridgeItems[index]?.product_puid];
-                String productName = "${productDetails?.name}";
-                int qty = usersFridgeItems[index]?.qty;
-                String description = "${usersFridgeItems[index]?.validDate} ";
-                String productLink = productDetails?.picLink;
+      body: Stack(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(15.0),
+            child: ListView.builder(
+              itemCount: fridgeItemCount,
+              itemBuilder: (BuildContext context, int index) {
+                if (usersFridgeItems != null) {
+                  Product productDetails =
+                      usersProducts[usersFridgeItems[index]?.product_puid];
+                  String productName = "${productDetails?.name}";
+                  int qty = usersFridgeItems[index]?.qty;
+                  String description = "${usersFridgeItems[index]?.validDate} ";
+                  String productLink = productDetails?.picLink;
 
-                return _sliderFridgeItemWidget(
-                    productLink, productName, description, index, qty);
-              } else
-                return null;
-            },
-          )),
+                  return _sliderFridgeItemWidget(
+                      productLink, productName, description, index, qty);
+                } else
+                  return null;
+              },
+            ),
+          ),
+          Align(
+            child: loadingIndicator,
+            alignment: FractionalOffset.center,
+          ),
+        ],
+      ),
       floatingActionButton: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -118,7 +147,7 @@ class FridgePageState extends State<FridgePage> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: FloatingActionButton.extended(
-                onPressed: _scanAndAdd,
+                onPressed: _loadingUserData ? null : _scanAndAdd,
                 label: Text("Scan and Add"),
                 icon: Icon(Icons.camera),
               ),

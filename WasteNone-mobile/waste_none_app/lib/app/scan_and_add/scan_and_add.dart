@@ -37,7 +37,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   String productInfo = "Product info";
   String productPic;
 
-//  String productDate = "";
+  bool _loadingProductData = false;
+
   DateTime selectedDate = DateTime.now();
   bool _productFetched = false;
 
@@ -49,6 +50,17 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   @override
   Widget build(BuildContext context) {
+    Widget loadingIndicator = _loadingProductData
+        ? new Container(
+            color: Colors.grey[300],
+            width: 70.0,
+            height: 70.0,
+            child: new Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: new Center(child: new CircularProgressIndicator())),
+          )
+        : new Container();
+
     return Scaffold(
       appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
         FlatButton(
@@ -56,48 +68,58 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           onPressed: _logOut,
         )
       ]),
-      body: Center(
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Row(
+      body: Stack(
+        children: <Widget>[
+          Center(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 30, left: 8, right: 8),
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.30,
-                      child: ProductImage(picLink: productPic),
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(top: 30, left: 8, right: 8),
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.30,
+                          child: ProductImage(picLink: productPic),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 30),
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.65,
+                          child: AutoSizeText(
+                            productInfo,
+                            style: new TextStyle(fontSize: 15.0),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 30),
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.65,
-                      child: AutoSizeText(
-                        productInfo,
-                        style: new TextStyle(fontSize: 15.0),
+                  Visibility(
+                    visible: _productFetched,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          bottom: 120, left: 20, right: 20),
+                      child: CalendarDatePicker(
+                        firstDate: DateTime.now(),
+                        initialDate: new DateTime(DateTime.now().year,
+                            DateTime.now().month, DateTime.now().day + 1),
+                        lastDate: DateTime(DateTime.now().year + 5,
+                            DateTime.now().month, DateTime.now().day),
+                        initialCalendarMode: DatePickerMode.day,
+                        onDateChanged: _dateChanged,
                       ),
                     ),
                   ),
-                ],
-              ),
-              Visibility(
-                visible: _productFetched,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: 120, left: 20, right: 20),
-                  child: CalendarDatePicker(
-                    firstDate: DateTime.now(),
-                    initialDate: DateTime.now(),
-                    lastDate: DateTime(DateTime.now().year + 5,
-                        DateTime.now().month, DateTime.now().day),
-                    initialCalendarMode: DatePickerMode.day,
-                    onDateChanged: _dateChanged,
-                  ),
-                ),
-              ),
-            ]),
+                ]),
+          ),
+          Align(
+            child: loadingIndicator,
+            alignment: FractionalOffset.center,
+          ),
+        ],
       ),
       floatingActionButton: Column(
           mainAxisAlignment: MainAxisAlignment.end,
@@ -246,6 +268,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 //    var eanCode = '5054563003232';
     var eanCode = '5900197022548';
 
+    _loadingProductData = true;
+
     print(eanCode);
     _productFetched = await _fetchFromWasteNoneDB(eanCode);
     print("product found in WasteNone database: $_productFetched");
@@ -257,6 +281,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       showProduct();
     else
       _showNotFoundMsg();
+
+    _loadingProductData = false;
   }
 
 //---------------------------------- /scan item --------------------------------
