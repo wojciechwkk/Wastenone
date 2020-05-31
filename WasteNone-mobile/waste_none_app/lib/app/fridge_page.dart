@@ -1,9 +1,11 @@
 import 'dart:collection';
 
+import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:waste_none_app/app/scan_and_add/scan_and_add.dart';
+import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
 import 'package:waste_none_app/services/auth.dart';
@@ -14,7 +16,7 @@ import 'models/fridge.dart';
 import 'models/product.dart';
 import 'models/user.dart';
 
-class FridgePage extends StatefulWidget {
+class FridgePage extends StatefulWidget with ProductQtyValidator {
   FridgePage({@required this.auth, @required this.db});
 
   final AuthBase auth;
@@ -34,6 +36,7 @@ class FridgePageState extends State<FridgePage> {
 
   WasteNoneUser user;
   Fridge currentFridge;
+
 //  int currentFridgeNo = 1; //default value ugly hardcode
 //  String fridgeID;
 
@@ -51,7 +54,16 @@ class FridgePageState extends State<FridgePage> {
     super.initState();
     _loadingUserData = true;
     fridgeItemCount = 0;
-    _fetchUserdata().then((value) => _fetchUserFridgeData());
+    //_fetchUserdata().then((value) => _fetchUserFridgeData());
+  }
+
+  final AsyncMemoizer _memoizer = AsyncMemoizer();
+
+  initUserData() {
+    return this._memoizer.runOnce(() async {
+      await _fetchUserdata();
+      await _fetchUserFridgeData();
+    });
   }
 
   Future<void> _fetchUserdata() async {
@@ -81,18 +93,18 @@ class FridgePageState extends State<FridgePage> {
   Future<void> _fetchUserFridgeData() async {
     LinkedHashMap<String, Product> products = LinkedHashMap<String, Product>();
     List<FridgeItem> fetchedFridgeItems =
-        await db?.getFridgeContent(currentFridge.fridgeID);
+        await db?.getFridgeContent(currentFridge?.fridgeID);
     if (fetchedFridgeItems == null) {
       print("your fridge is empty");
     } else {
-      print("recognized fridge: ${currentFridge.fridgeID}");
+      print("recognized fridge: ${currentFridge?.fridgeID}");
 
-      print("found ${fetchedFridgeItems.length} items in the fridge");
+      print("found ${fetchedFridgeItems?.length} items in the fridge");
       if (fetchedFridgeItems?.iterator != null) {
         for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
           Product product =
-              await _getProductsDetails(fetchedFridgeItem.product_puid);
-          products[fetchedFridgeItem.product_puid] = product;
+              await _getProductsDetails(fetchedFridgeItem?.product_puid);
+          products[fetchedFridgeItem?.product_puid] = product;
         }
       }
     }
@@ -121,59 +133,70 @@ class FridgePageState extends State<FridgePage> {
         ? currentFridge.displayName
         : indexOfFridge != null ? "fridge ${indexOfFridge + 1}" : "fridge";
 
-    return Scaffold(
-      appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
-        FlatButton(
-            child: Text('Logout', style: TextStyle(fontSize: 18)),
-            onPressed: _logOut)
-      ]),
-      body: Stack(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(0.0),
-            child: ListView.builder(
-              itemCount: fridgeItemCount != null ? fridgeItemCount + 1 : 1,
-              itemBuilder: (BuildContext context, int index) {
-                if (index == 0) {
-                  return _sliderHeaderWidget(fridgeLabel);
-                }
-                if (usersCurrentFridgeItems != null) {
-                  index--;
-                  Product productDetails = usersCurrentProducts[
-                      usersCurrentFridgeItems[index]?.product_puid];
-                  String productName = "${productDetails?.name}";
-                  int qty = usersCurrentFridgeItems[index]?.qty;
-                  String description =
-                      "${usersCurrentFridgeItems[index]?.validDate} ";
-                  String productLink = productDetails?.picLink;
+    return FutureBuilder(
+      future: this.initUserData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          return Scaffold(
+            appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
+              FlatButton(
+                  child: Text('Logout', style: TextStyle(fontSize: 18)),
+                  onPressed: _logOut)
+            ]),
+            body: Stack(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(0.0),
+                  child: ListView.builder(
+                    itemCount:
+                        fridgeItemCount != null ? fridgeItemCount + 1 : 1,
+                    itemBuilder: (BuildContext context, int index) {
+                      if (index == 0) {
+                        return _sliderHeaderWidget(fridgeLabel);
+                      }
+                      if (usersCurrentFridgeItems != null) {
+                        index--;
+                        Product productDetails = usersCurrentProducts[
+                            usersCurrentFridgeItems[index]?.product_puid];
+                        String productName = "${productDetails?.name}";
+                        int qty = usersCurrentFridgeItems[index]?.qty;
+                        String description =
+                            "${usersCurrentFridgeItems[index]?.validDate} ";
+                        String productLink = productDetails?.picLink;
 
-                  return _sliderFridgeItemWidget(
-                      productLink, productName, description, index, qty);
-                } else
-                  return null;
-              },
+                        return _sliderFridgeItemWidget(
+                            productLink, productName, description, index, qty);
+                      } else
+                        return null;
+                    },
+                  ),
+                ),
+                Align(
+                  child: loadingIndicator,
+                  alignment: FractionalOffset.center,
+                ),
+              ],
             ),
-          ),
-          Align(
-            child: loadingIndicator,
-            alignment: FractionalOffset.center,
-          ),
-        ],
-      ),
-      floatingActionButton: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: FloatingActionButton.extended(
-                onPressed: _loadingUserData ? null : _scanAndAdd,
-                label: Text("Scan and Add"),
-                icon: Icon(Icons.camera),
-              ),
-            ),
-          ]),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: FloatingActionButton.extended(
+                      onPressed: _loadingUserData ? null : _scanAndAdd,
+                      label: Text("Scan and Add"),
+                      icon: Icon(Icons.camera),
+                    ),
+                  ),
+                ]),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+          );
+        } else {
+          return LoadingIndicator();
+        }
+      },
     );
   }
 
@@ -270,6 +293,7 @@ class FridgePageState extends State<FridgePage> {
 
   final TextEditingController _fridgeLabelTextController =
       TextEditingController();
+
   String get _fridgeLabel => _fridgeLabelTextController.text.trim();
   bool _fridgeLabelChanged = false;
 
@@ -328,7 +352,7 @@ class FridgePageState extends State<FridgePage> {
     currentFridge.displayName = newFridgeLabel;
     print('change label to $newFridgeLabel');
     await db.updateFridge(currentFridge);
-    _showFridge(user.getFridgeIDs().indexOf(currentFridge.fridgeID));
+    _refreshCurrenFridge();
   }
 
   _addNewFridge() async {
@@ -396,14 +420,15 @@ class FridgePageState extends State<FridgePage> {
           caption: 'Change date',
           color: Colors.blue,
           icon: Icons.date_range,
-          onTap: () => null, //_moveToAnotherFridgeSomeNumber
+          onTap: () => _showChangeDateDialog(
+              context, index), //_moveToAnotherFridgeSomeNumber
         ),
         IconSlideAction(
           caption: 'Change qty',
           color: Colors.indigo,
           icon: Icons.content_cut,
-          onTap: () =>
-              _changeFridgeItem(context), //Navigator.of(context).pop('Share'),
+          onTap: () => _showQtyDialog(
+              context, index), //Navigator.of(context).pop('Share'),
         ),
       ],
       secondaryActions: <Widget>[
@@ -411,27 +436,223 @@ class FridgePageState extends State<FridgePage> {
           caption: 'Move',
           color: Colors.green,
           icon: Icons.call_split,
-          onTap: () => null, //_moveToAnotherFridgeSomeNumber
+          onTap: () => _showMoveToAnotherFridgePopup(
+              index, context), //_moveToAnotherFridgeSomeNumber
         ),
         IconSlideAction(
           caption: 'Delete',
           color: Colors.red,
           icon: Icons.delete,
-          onTap: () => Navigator.of(context).pop('Delete'),
+          onTap: () => _deleteFridgeItem(index),
         ),
       ],
     );
   }
 
-  _changeFridgeItem(dynamic context) {
-    print(context);
-
-//    db.updateFridgeItemQty(fridgeItem)
+  _changeFridgeItemDate(int index) async {
+    print('changeFridgeItemDate');
+    FridgeItem fridgeItem = usersCurrentFridgeItems[index];
+    fridgeItem.validDate =
+        '${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}';
+    await db.updateFridgeItem(fridgeItem);
+    _refreshCurrenFridge();
   }
+
+  DateTime selectedDate;
+  void _dateChanged(DateTime picked) {
+    if (picked != null && picked != selectedDate)
+      setState(() {
+        selectedDate = picked;
+      });
+    return null;
+  }
+
+  _showChangeDateDialog(BuildContext context, int index) async {
+    await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: Container(
+              width: MediaQuery.of(context).size.width * 0.75,
+              child: CalendarDatePicker(
+                firstDate: DateTime.now(),
+                initialDate: new DateTime(DateTime.now().year,
+                    DateTime.now().month, DateTime.now().day + 1),
+                lastDate: DateTime(DateTime.now().year + 5,
+                    DateTime.now().month, DateTime.now().day),
+                initialCalendarMode: DatePickerMode.day,
+                onDateChanged: _dateChanged,
+              ),
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    _changeFridgeItemDate(index);
+                    Navigator.pop(context);
+                  }),
+              new FlatButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  }),
+            ],
+          );
+        });
+  }
+
+  _changeFridgeItemQty(int index, String newQty) async {
+    print('changeFridgeItemQty');
+    FridgeItem fridgeItem = usersCurrentFridgeItems[index];
+    fridgeItem.qty = int.parse(newQty);
+    await db.updateFridgeItem(fridgeItem);
+    _refreshCurrenFridge();
+  }
+
+  final TextEditingController _qtyTextController = TextEditingController();
+  String get _qty => _qtyTextController.text.trim();
+  bool _qtyChanged = false;
+  void _qtyChangedState() {
+    setState(() {
+      _qtyChanged = true;
+    });
+  }
+
+  _showQtyDialog(BuildContext context, int index) async {
+    _qtyTextController.clear();
+    _qtyChanged = false;
+    await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: new Row(
+              children: <Widget>[
+                new Expanded(
+                  child: new TextFormField(
+                    controller: _qtyTextController,
+                    inputFormatters: <TextInputFormatter>[
+                      WhitelistingTextInputFormatter.digitsOnly
+                    ],
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    decoration: new InputDecoration(
+                      labelText: 'Add new quantity',
+                      enabled: true,
+//                      errorText: widget.qtyValidator.isValid(_qty)
+//                          ? widget.qtyErrorText
+//                          : null,
+                    ),
+                    onChanged: (qty) => _qtyChangedState,
+//                    validator: () => ProductQtyValueVaidator();
+                  ),
+                )
+              ],
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    _changeFridgeItemQty(
+                        index, _qtyTextController.text.toString());
+                    Navigator.pop(context);
+                  }),
+              new FlatButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  }),
+            ],
+          );
+        });
+  }
+
+  _deleteFridgeItem(int index) async {
+    await db.deleteFridgeItem(usersCurrentFridgeItems[index]);
+    _refreshCurrenFridge();
+  }
+
+  final TextEditingController _fridgeIDToMoveItemToController =
+      TextEditingController();
+  String get _fridgeIDToMoveItemTo =>
+      _fridgeIDToMoveItemToController.text.trim();
+  bool _fridgeIDToMoveItemToChanged = false;
+  void _fridgeIDToMoveItemToChangedState() {
+    setState(() {
+      _fridgeIDToMoveItemToChanged = true;
+    });
+  }
+
+  _showMoveToAnotherFridgePopup(int indexx, BuildContext context) async {
+    _fridgeIDToMoveItemToController.clear();
+    _fridgeIDToMoveItemToChanged = false;
+    List<Fridge> usersFridges = await db.getUsersFridges(user);
+//    usersFridges.map((e) => print(e.toJson()));
+    await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+//          if (user?.getFridgeIDs()?.length > 1) {
+          return AlertDialog(
+            content: Container(
+              width: MediaQuery.of(context).size.width * 0.5,
+              height: user.getFridgeIDs().length * 55.0,
+              child: ListView.builder(
+                  itemCount: usersFridges.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    if (usersFridges[index].fridgeID !=
+                        currentFridge.fridgeID) {
+                      var text = usersFridges[index].displayName != null
+                          ? 'fridge ${usersFridges[index].fridgeNo}: ${usersFridges[index].displayName}'
+                          : 'fridge ${usersFridges[index].fridgeNo}';
+                      return GestureDetector(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.blueGrey),
+                          ),
+                          height: 55,
+                          child: Center(child: Text(text)),
+                        ),
+                        onTap: () => _moveItemToAnotherFridge(
+                            indexx, usersFridges[index].fridgeID),
+                      );
+                    } else
+                      return Container();
+                  }),
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  }),
+            ],
+          );
+//          } else {
+//            print('You just got 1 fridge!');
+//            return null;
+//          }
+        });
+  }
+
+  _moveItemToAnotherFridge(int index, String fridgeID) async {
+//    if (currentFridge.fridgeID != fridgeID) {
+    print('move $index: ${usersCurrentFridgeItems[index].toJson()}');
+    FridgeItem fridgeItem = usersCurrentFridgeItems[index];
+    await db.deleteFridgeItem(fridgeItem);
+    fridgeItem.fridge_no = fridgeID;
+    await db.addToFridge(fridgeItem);
+    Navigator.pop(context);
+    _refreshCurrenFridge();
+//    }
+  }
+
   //---------------------------- /flutter widgets ------------------------------
 
   Future<Product> _getProductsDetails(String puid) async {
     return await db.getProductByPUID(puid);
+  }
+
+  _refreshCurrenFridge() {
+    _showFridge(user.getFridgeIDs().indexOf(currentFridge.fridgeID));
   }
 
   void _scanAndAdd() {

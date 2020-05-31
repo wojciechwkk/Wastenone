@@ -37,6 +37,8 @@ dependencies:
   auto_size_text: ^2.1.0
   flutter_slidable: ^0.5.4
   uuid: ^2.0.4
+  async: ^2.4.1
+
 
 dev_dependencies:
   flutter_test:

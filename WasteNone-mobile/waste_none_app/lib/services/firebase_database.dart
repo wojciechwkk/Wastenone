@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_github_api/flutter_github_api.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
@@ -9,9 +11,16 @@ import 'package:waste_none_app/services/auth.dart';
 class WNFirebaseDB {
   var _firebaseDB = FirebaseDatabase.instance;
 
-  createUser(WasteNoneUser user) async {
+  static var streamController = new StreamController();
+  Stream<dynamic> dbUserStream = streamController.stream;
+
+  Stream<dynamic> get onDBCreateStateChange {
+    return dbUserStream;
+  }
+
+  Future<bool> createUser(WasteNoneUser user) async {
     if (await _userExists(user))
-      return;
+      return false;
     else {
       String defaultFridge = "${user.uid}-1";
       Fridge fridge = Fridge(defaultFridge, 1);
@@ -25,7 +34,10 @@ class WNFirebaseDB {
       print('dbRef: ${dbNewUserRef.key}');
       user.dbRef = dbNewUserRef.key;
       await dbNewUserRef.set(user?.toJson());
-      this.addFridge(user, fridge);
+      await this.addFridge(user, fridge);
+
+      streamController.add(user);
+      return true;
     }
   }
 
@@ -171,7 +183,7 @@ class WNFirebaseDB {
     return snapshot;
   }
 
-  updateFridgeItemQty(FridgeItem fridgeItem) async {
+  updateFridgeItem(FridgeItem fridgeItem) async {
     await _firebaseDB
         .reference()
         .child("fridge-contents/${fridgeItem.fridge_no}/")
@@ -179,7 +191,16 @@ class WNFirebaseDB {
         .set(fridgeItem.toJson());
   }
 
-  updateFridgeItemDate(String puid, String date) {}
+  deleteFridgeItem(FridgeItem fridgeItem) async {
+    print('delete user ${fridgeItem?.toJson()}');
+    if (fridgeItem != null) {
+      await _firebaseDB
+          .reference()
+          .child("fridge-contents/${fridgeItem.fridge_no}/")
+          .child(fridgeItem.dbKey)
+          .remove();
+    }
+  }
 
   Future<void> addFridge(WasteNoneUser user, Fridge fridge) async {
     print("add fridge: ${fridge.fridgeID}");
@@ -221,6 +242,32 @@ class WNFirebaseDB {
         fridgeResult.add(Fridge.fromMap(fridgeKey, fridgeMap[fridgeKey]));
       }
       return fridgeResult[0];
+    }
+    return null;
+  }
+
+  Future<List<Fridge>> getUsersFridges(WasteNoneUser user) async {
+    print("get users fridges: ${user.displayName}");
+    DataSnapshot snapshot = await _firebaseDB
+        .reference()
+        .child("fridge")
+        .orderByKey()
+        .startAt(user.uid)
+        .once();
+
+    if (snapshot != null && snapshot.value != null) {
+      var fridgeMap = Map<String, dynamic>.from(snapshot.value);
+
+      var fridgeResult = List<Fridge>();
+      for (var fridgeKey in fridgeMap.keys) {
+//        print("halo: $fridgeKey: ${fridgeMap[fridgeKey]}");
+        var fridge = Map<String, dynamic>.from(fridgeMap[fridgeKey]);
+        for (var subFridgeKey in fridge.keys) {
+          fridgeResult.add(Fridge.fromMap(subFridgeKey, fridge[subFridgeKey]));
+        }
+      }
+//      fridgeResult.sort();
+      return fridgeResult;
     }
     return null;
   }

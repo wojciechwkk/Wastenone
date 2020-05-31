@@ -3,7 +3,7 @@ import 'dart:collection';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 
-class Fridge {
+class Fridge extends Comparable {
   Fridge(@required this.fridgeID, @required this.fridgeNo);
 
   String dbKey;
@@ -44,5 +44,14 @@ class Fridge {
       "displayName": displayName,
       "otherUsers": otherUsers,
     };
+  }
+
+  @override
+  int compareTo(other) {
+    if (this.fridgeNo < other.fridgeNo) return 1;
+    if (this.fridgeNo > other.fridgeNo)
+      return -1;
+    else
+      return 0;
   }
 }
