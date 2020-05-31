@@ -1,11 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-
-class WasteNoneUser {
-  WasteNoneUser({@required this.uid, @required this.displayName});
-  final String uid;
-  final String displayName;
-}
+import 'package:waste_none_app/app/models/user.dart';
 
 abstract class AuthBase {
   Stream<WasteNoneUser> get onAuthStateChange;

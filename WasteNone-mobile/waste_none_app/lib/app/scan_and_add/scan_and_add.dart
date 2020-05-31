@@ -8,6 +8,7 @@ import 'package:http/http.dart';
 import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
+import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
@@ -15,24 +16,28 @@ import 'package:waste_none_app/services/auth.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
 class ScanAndAdd extends StatefulWidget with ProductQtyValidator {
-  ScanAndAdd({@required this.auth, @required this.db});
+  ScanAndAdd({@required this.auth, @required this.db, @required this.fridgeId});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  final String fridgeId;
 
   @override
   _ScanAndAddState createState() =>
-      _ScanAndAddState(auth: this.auth, db: this.db);
+      _ScanAndAddState(auth: this.auth, db: this.db, fridgeId: this.fridgeId);
 }
 
 class _ScanAndAddState extends State<ScanAndAdd> {
-  _ScanAndAddState({@required this.auth, @required this.db});
+  _ScanAndAddState(
+      {@required this.auth, @required this.db, @required this.fridgeId});
 
   final AuthBase auth;
   final WNFirebaseDB db;
 
+  final String fridgeId;
+
   Product product;
-  String usersFridgeNo = "1"; //default to be extended;
+//  String usersFridgeNo = "1"; //default to be extended;
 
   String welcomeText = "WasteNone";
   String productInfo = "Product info";
@@ -56,10 +61,10 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
     return Scaffold(
       appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
-        FlatButton(
-          child: Text('Logout', style: TextStyle(fontSize: 18)),
-          onPressed: _logOut,
-        )
+//        FlatButton(
+//          child: Text('Logout', style: TextStyle(fontSize: 18)),
+//          onPressed: _logOut,
+//        )
       ]),
       body: Stack(
         children: <Widget>[
@@ -81,7 +86,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                       Padding(
                         padding: const EdgeInsets.only(top: 30),
                         child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.65,
+                          width: MediaQuery.of(context).size.width * 0.6,
                           child: AutoSizeText(
                             productInfo,
                             style: new TextStyle(fontSize: 15.0),
@@ -141,11 +146,11 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     );
   }
 
-  _removeFridge() async {
-    WasteNoneUser wasteNoneUser = await auth?.currentUser();
-    var fridgeNo = "${wasteNoneUser.uid}-$usersFridgeNo";
-    db?.removeFridge(fridgeNo);
-  }
+//  _removeFridge() async {
+//    WasteNoneUser wasteNoneUser = await auth?.currentUser();
+//    var fridgeNo = "${wasteNoneUser.uid}-$usersFridgeNo";
+//    db?.removeFridge(fridgeNo);
+//  }
 
 //---------------------------------- adding item -------------------------------
 
@@ -230,7 +235,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   Future<FridgeItem> _prepareFridgeItem(String qty) async {
     FridgeItem fridgeItem = FridgeItem();
     WasteNoneUser wasteNoneUser = await auth.currentUser();
-    fridgeItem.fridge_no = "${wasteNoneUser.uid}-$usersFridgeNo";
+    fridgeItem.fridge_no = fridgeId;
     fridgeItem.product_puid = product?.puid;
     fridgeItem.qty = num.parse(qty);
     fridgeItem.validDate =
@@ -392,13 +397,5 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     setState(() {
       productInfo = "Product not found";
     });
-  }
-
-  Future<void> _logOut() async {
-    try {
-      await auth.logOut();
-    } catch (e) {
-      print(e.toString());
-    }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_twitter_login/flutter_twitter_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:waste_none_app/app/models/user.dart';
 
 import 'auth.dart';
 
@@ -12,7 +13,7 @@ class WNFirebaseAuth implements AuthBase {
   WasteNoneUser _userFromFirebase(FirebaseUser user) {
     return (user == null)
         ? null
-        : new WasteNoneUser(uid: user.uid, displayName: user.displayName);
+        : new WasteNoneUser(user.uid, user.displayName);
   }
 
   @override
@@ -29,7 +30,12 @@ class WNFirebaseAuth implements AuthBase {
   @override
   Future<WasteNoneUser> logInAnonymously() async {
     final authResult = await _firebaseAuth.signInAnonymously();
-    return _userFromFirebase(authResult.user);
+    UserUpdateInfo userUpdateInfo = UserUpdateInfo();
+    userUpdateInfo.displayName = 'anonymous';
+    await authResult.user.updateProfile(userUpdateInfo);
+    await authResult.user.reload();
+    FirebaseUser user = await _firebaseAuth.currentUser();
+    return _userFromFirebase(user);
   }
 
   @override
@@ -37,7 +43,6 @@ class WNFirebaseAuth implements AuthBase {
       String email, String password, String displayName) async {
     final authResult = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email, password: password);
-    print('created, about to update displayNamee');
     UserUpdateInfo userUpdateInfo = UserUpdateInfo();
     userUpdateInfo.displayName = displayName;
     authResult.user.updateProfile(userUpdateInfo);
@@ -46,10 +51,16 @@ class WNFirebaseAuth implements AuthBase {
 
   @override
   Future<void> logOut() async {
-    final googleSignIn = GoogleSignIn();
-    await googleSignIn.signOut();
-    await twitterLogin.logOut();
-    await _firebaseAuth.signOut();
+    FirebaseUser user = await _firebaseAuth.currentUser();
+    print('user: $user');
+    if (user?.displayName == 'anonymous')
+      user.delete();
+    else {
+      final googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
+      await twitterLogin.logOut();
+      await _firebaseAuth.signOut();
+    }
   }
 
   @override

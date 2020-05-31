@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:waste_none_app/app/models/fridge.dart';
+import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/form_submit_button.dart';
 import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/services/firebase_database.dart';
 
 enum LogInWithEmailFormType { logIn, createUser }
 
 class LogInWithEmailForm extends StatefulWidget
     with EmailAndPasswordStringValidator {
-  LogInWithEmailForm({@required this.auth});
+  LogInWithEmailForm({@required this.auth, @required this.db});
 
   final AuthBase auth;
+  final WNFirebaseDB db;
 
   @override
   State<StatefulWidget> createState() =>
-      new _LogInWithEmailFormState(auth: auth);
+      new _LogInWithEmailFormState(auth: auth, db: db);
 }
 
 class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
-  _LogInWithEmailFormState({@required this.auth});
+  _LogInWithEmailFormState({@required this.auth, @required this.db});
 
   final AuthBase auth;
+  final WNFirebaseDB db;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -54,15 +59,16 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
           auth.logInWithEmailAndPassword(_email, _password);
         } else {
           if (widget.displayNameValidator.isValid(_displayName)) {
-            auth.createUser(_email, _password, _displayName);
+            WasteNoneUser user =
+                await auth.createUser(_email, _password, _displayName);
+            await db.createUser(user);
+            _isLoading = false;
           }
         }
       }
     } catch (e) {
       print(e.toString());
-    } finally {
-      _isLoading = false;
-    }
+    } finally {}
   }
 
   void _updateState() {

@@ -4,9 +4,11 @@ import 'package:waste_none_app/services/firebase_database.dart';
 
 import 'fridge_page.dart';
 import 'log_in/log_in_page.dart';
+import 'models/user.dart';
 
 class LandingSemaphorePage extends StatelessWidget {
   LandingSemaphorePage({@required this.auth, @required this.db});
+
   final AuthBase auth;
   final WNFirebaseDB db;
 
@@ -20,13 +22,14 @@ class LandingSemaphorePage extends StatelessWidget {
             if (user == null) {
               return LogInPage(
                 auth: auth,
+                db: db,
+              );
+            } else {
+              return FridgePage(
+                auth: auth,
+                db: db,
               );
             }
-
-            return FridgePage(
-              auth: auth,
-              db: db,
-            );
           } else {
             return Scaffold(
               body: Center(
