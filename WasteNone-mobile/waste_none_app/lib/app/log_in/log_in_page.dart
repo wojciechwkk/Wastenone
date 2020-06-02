@@ -37,26 +37,6 @@ class LogInPage extends StatelessWidget {
           children: <Widget>[
             SizedBox(height: 70, child: Image.asset('images/wastenone.png')),
             SizedBox(height: 100.0),
-            Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  SocialLogInButton(
-                      //'Log in with Google',
-                      assetPic: 'images/google.png',
-                      height: 60,
-                      onPressed: _logInWithGoogle),
-                  SocialLogInButton(
-                      //'Log in with Twitter',
-                      assetPic: 'images/twitter.png',
-                      height: 60,
-                      onPressed: _logInWithTwitter),
-                  SocialLogInButton(
-                      //'Log in with Github',
-                      assetPic: 'images/github.png',
-                      height: 60,
-                      onPressed: _logInWithGithub),
-                ]),
-            SizedBox(height: 26.0),
             LogInWithEmailForm(
               auth: auth,
               db: db,
@@ -86,29 +66,5 @@ class LogInPage extends StatelessWidget {
     WasteNoneUser user = await auth.logInAnonymously();
     print('logged in user: ${user.toJson()}');
     await db.createUser(user);
-  }
-
-  Future<void> _logInWithGoogle() async {
-    try {
-      auth.logInWihGoogle().then((user) => db.createUser(user));
-    } catch (e) {
-      print(e.toString());
-    }
-  }
-
-  Future<void> _logInWithTwitter() async {
-    try {
-      auth.logInWihTwitter().then((user) => db.createUser(user));
-    } catch (e) {
-      print(e.toString());
-    }
-  }
-
-  Future<void> _logInWithGithub() async {
-    try {
-      auth.logInWihGithub().then((user) => db.createUser(user));
-    } catch (e) {
-      print(e.toString());
-    }
   }
 }

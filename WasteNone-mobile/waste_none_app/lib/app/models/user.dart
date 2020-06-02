@@ -9,7 +9,7 @@ class WasteNoneUser {
 
   String uid;
   String dbRef;
-  final String displayName;
+  String displayName;
   List<dynamic> _fridgeIDs;
   int fridgesAdded;
 
@@ -53,18 +53,17 @@ class WasteNoneUser {
 
   addFridgeID(String fridgeID) {
     if (_fridgeIDs == null) {
-      print('create dynamic fridge list');
       _fridgeIDs = List<dynamic>();
       _fridgeIDs.add(fridgeID);
       fridgesAdded = 1;
     } else {
-      var newfridgeIDs = new List<dynamic>(_fridgeIDs.length + 1);
+      var newFridgeIDs = new List<dynamic>(_fridgeIDs.length + 1);
       int fridgeArrayIndex = 0;
       _fridgeIDs.forEach((fridgeId) {
-        newfridgeIDs[fridgeArrayIndex++] = fridgeId;
+        newFridgeIDs[fridgeArrayIndex++] = fridgeId;
       });
-      newfridgeIDs[fridgeArrayIndex] = fridgeID;
-      _fridgeIDs = newfridgeIDs;
+      newFridgeIDs[fridgeArrayIndex] = fridgeID;
+      _fridgeIDs = newFridgeIDs;
       fridgesAdded++;
     }
   }

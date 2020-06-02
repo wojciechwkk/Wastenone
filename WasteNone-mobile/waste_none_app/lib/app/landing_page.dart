@@ -15,8 +15,10 @@ class LandingSemaphorePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<WasteNoneUser>(
-        stream: auth.onAuthStateChange,
+//        stream: auth.onAuthStateChange,
+        stream: db.onDBCreateStateChange,
         builder: (context, snapshot) {
+//          print(snapshot.connectionState);
           if (snapshot.connectionState == ConnectionState.active) {
             WasteNoneUser user = snapshot.data;
             if (user == null) {
@@ -24,12 +26,11 @@ class LandingSemaphorePage extends StatelessWidget {
                 auth: auth,
                 db: db,
               );
-            } else {
+            } else
               return FridgePage(
                 auth: auth,
                 db: db,
               );
-            }
           } else {
             return Scaffold(
               body: Center(

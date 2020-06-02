@@ -9,17 +9,23 @@ import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/services/auth.dart';
 
 class WNFirebaseDB {
+  WNFirebaseDB() {
+    streamController = new StreamController();
+    streamController.sink.add(null);
+  }
+
   var _firebaseDB = FirebaseDatabase.instance;
+  StreamController<WasteNoneUser> streamController;
 
-  static var streamController = new StreamController();
-  Stream<dynamic> dbUserStream = streamController.stream;
-
-  Stream<dynamic> get onDBCreateStateChange {
-    return dbUserStream;
+  Stream<WasteNoneUser> get onDBCreateStateChange {
+    return streamController.stream;
   }
 
   Future<bool> createUser(WasteNoneUser user) async {
-    if (await _userExists(user))
+    print('create db user: ${user.toJson()}');
+    bool userExists = await _userExists(user);
+    print('userExists $userExists');
+    if (userExists)
       return false;
     else {
       String defaultFridge = "${user.uid}-1";
@@ -36,7 +42,9 @@ class WNFirebaseDB {
       await dbNewUserRef.set(user?.toJson());
       await this.addFridge(user, fridge);
 
-      streamController.add(user);
+      streamController.sink.add(user);
+//      streamController.sink.close();
+//      streamController.close();
       return true;
     }
   }
@@ -72,6 +80,8 @@ class WNFirebaseDB {
             .remove();
       }
     }
+    streamController.sink.add(null);
+//    streamController.sink.close();
   }
 
   Future<WasteNoneUser> getUserData(String uid) async {

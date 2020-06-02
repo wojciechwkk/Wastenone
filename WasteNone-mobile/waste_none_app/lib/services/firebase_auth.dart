@@ -41,12 +41,31 @@ class WNFirebaseAuth implements AuthBase {
   @override
   Future<WasteNoneUser> createUser(
       String email, String password, String displayName) async {
-    final authResult = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email, password: password);
-    UserUpdateInfo userUpdateInfo = UserUpdateInfo();
-    userUpdateInfo.displayName = displayName;
-    authResult.user.updateProfile(userUpdateInfo);
-    return _userFromFirebase((authResult.user));
+    try {
+      final authResult = await _firebaseAuth.createUserWithEmailAndPassword(
+          email: email, password: password);
+      if (authResult != null) {
+        if (displayName != null) {
+          print('fb.setting display text $displayName');
+          UserUpdateInfo userUpdateInfo = UserUpdateInfo();
+          userUpdateInfo.displayName = displayName;
+          await authResult.user.updateProfile(userUpdateInfo);
+        }
+        print(
+            'fb.created user ${_userFromFirebase((authResult.user)).toJson()}');
+        return _userFromFirebase((authResult.user));
+      } else
+        return null;
+    } on PlatformException catch (exception) {
+      switch (exception.code) {
+        case 'ERROR_EMAIL_ALREADY_IN_USE':
+          print('error email already in use');
+          break;
+        default:
+          break;
+      }
+    }
+    return null;
   }
 
   @override

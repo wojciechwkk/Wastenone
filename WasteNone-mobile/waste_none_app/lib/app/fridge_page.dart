@@ -267,22 +267,22 @@ class FridgePageState extends State<FridgePage> {
 
   _showNextFridge() async {
     if (user?.getFridgeIDs()?.length > 1) {
-      print('currentFridge.fridgeID: ${currentFridge.fridgeID}');
+//      print('currentFridge.fridgeID: ${currentFridge.fridgeID}');
       int currentFridgeListIndex =
           user?.getFridgeIDs()?.indexOf(currentFridge.fridgeID);
-      var newFridgeId =
+      var newFridgeNo =
           (currentFridgeListIndex + 1) % user?.getFridgeIDs()?.length;
-      print(
-          'currentFridgeListIndex: $currentFridgeListIndex, newFridgeId: $newFridgeId');
-      print('change fridge from ${currentFridge.fridgeID} to $newFridgeId');
-      _showFridge(newFridgeId);
+//      print(
+//          'currentFridgeListIndex: $currentFridgeListIndex, newFridgeId: $newFridgeNo');
+//      print('change fridge from ${currentFridge.fridgeID} to $newFridgeNo');
+      _showFridge(newFridgeNo);
     }
   }
 
-  _showFridge(int newFridgeId) async {
+  _showFridge(int newFridgeNo) async {
     if (mounted) {
-      print('show $newFridgeId');
-      String nextFridgeID = user?.getFridgeIDs()[newFridgeId];
+      print('show user fridge no. $newFridgeNo');
+      String nextFridgeID = user?.getFridgeIDs()[newFridgeNo];
       var fetchedCurrentFridge = await db.getFridge(nextFridgeID);
       setState(() {
         currentFridge = fetchedCurrentFridge;
@@ -348,14 +348,14 @@ class FridgePageState extends State<FridgePage> {
         });
   }
 
-  _editFridgeLabel(String newFridgeLabel) async {
+  Future<void> _editFridgeLabel(String newFridgeLabel) async {
     currentFridge.displayName = newFridgeLabel;
     print('change label to $newFridgeLabel');
     await db.updateFridge(currentFridge);
-    _refreshCurrenFridge();
+    _refreshCurrentFridge();
   }
 
-  _addNewFridge() async {
+  Future<void> _addNewFridge() async {
     if (user != null) {
       print(
           "add new fridge user: ${user.toJson()}, fridge count: ${user.fridgesAdded}");
@@ -368,7 +368,7 @@ class FridgePageState extends State<FridgePage> {
     }
   }
 
-  _deleteFridge() async {
+  Future<void> _deleteFridge() async {
     print('delete fridge ${currentFridge.fridgeID}');
     var usersIndexOfFridge =
         user.getFridgeIDs().indexOf(currentFridge.fridgeID);
@@ -449,17 +449,17 @@ class FridgePageState extends State<FridgePage> {
     );
   }
 
-  _changeFridgeItemDate(int index) async {
+  Future<void> _changeFridgeItemDate(int index) async {
     print('changeFridgeItemDate');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
     fridgeItem.validDate =
         '${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}';
     await db.updateFridgeItem(fridgeItem);
-    _refreshCurrenFridge();
+    _refreshCurrentFridge();
   }
 
   DateTime selectedDate;
-  void _dateChanged(DateTime picked) {
+  _dateChanged(DateTime picked) {
     if (picked != null && picked != selectedDate)
       setState(() {
         selectedDate = picked;
@@ -501,12 +501,12 @@ class FridgePageState extends State<FridgePage> {
         });
   }
 
-  _changeFridgeItemQty(int index, String newQty) async {
+  Future<void> _changeFridgeItemQty(int index, String newQty) async {
     print('changeFridgeItemQty');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
     fridgeItem.qty = int.parse(newQty);
     await db.updateFridgeItem(fridgeItem);
-    _refreshCurrenFridge();
+    _refreshCurrentFridge();
   }
 
   final TextEditingController _qtyTextController = TextEditingController();
@@ -566,9 +566,9 @@ class FridgePageState extends State<FridgePage> {
         });
   }
 
-  _deleteFridgeItem(int index) async {
+  Future<void> _deleteFridgeItem(int index) async {
     await db.deleteFridgeItem(usersCurrentFridgeItems[index]);
-    _refreshCurrenFridge();
+    _refreshCurrentFridge();
   }
 
   final TextEditingController _fridgeIDToMoveItemToController =
@@ -606,10 +606,19 @@ class FridgePageState extends State<FridgePage> {
                       return GestureDetector(
                         child: Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.blueGrey),
+                            color: Colors.blueGrey[200],
+                            border: Border.all(color: Colors.white),
                           ),
                           height: 55,
-                          child: Center(child: Text(text)),
+                          child: Row(
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(Icons.call_split),
+                              ),
+                              Center(child: Text(text)),
+                            ],
+                          ),
                         ),
                         onTap: () => _moveItemToAnotherFridge(
                             indexx, usersFridges[index].fridgeID),
@@ -633,7 +642,7 @@ class FridgePageState extends State<FridgePage> {
         });
   }
 
-  _moveItemToAnotherFridge(int index, String fridgeID) async {
+  Future<void> _moveItemToAnotherFridge(int index, String fridgeID) async {
 //    if (currentFridge.fridgeID != fridgeID) {
     print('move $index: ${usersCurrentFridgeItems[index].toJson()}');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
@@ -641,7 +650,7 @@ class FridgePageState extends State<FridgePage> {
     fridgeItem.fridge_no = fridgeID;
     await db.addToFridge(fridgeItem);
     Navigator.pop(context);
-    _refreshCurrenFridge();
+    _refreshCurrentFridge();
 //    }
   }
 
@@ -651,7 +660,7 @@ class FridgePageState extends State<FridgePage> {
     return await db.getProductByPUID(puid);
   }
 
-  _refreshCurrenFridge() {
+  _refreshCurrentFridge() {
     _showFridge(user.getFridgeIDs().indexOf(currentFridge.fridgeID));
   }
 

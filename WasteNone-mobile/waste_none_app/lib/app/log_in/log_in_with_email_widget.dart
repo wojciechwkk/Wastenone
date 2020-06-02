@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:waste_none_app/app/log_in/social_log_in_button.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
@@ -59,9 +60,14 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
           auth.logInWithEmailAndPassword(_email, _password);
         } else {
           if (widget.displayNameValidator.isValid(_displayName)) {
-            WasteNoneUser user =
+            print(
+                'fb.about to create email account: $_email for $_displayName');
+            WasteNoneUser firebaseUser =
                 await auth.createUser(_email, _password, _displayName);
-            await db.createUser(user);
+            if (firebaseUser != null) {
+              firebaseUser.displayName = _displayName;
+              await db.createUser(firebaseUser);
+            }
             _isLoading = false;
           }
         }
@@ -89,7 +95,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
           ? LogInWithEmailFormType.createUser
           : LogInWithEmailFormType.logIn;
     });
-    _emailController.clear();
+//    _emailController.clear();
     _emailController.clear();
     _passwordController.clear();
   }
@@ -110,7 +116,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
     return _buildContent();
   }
 
-  Container _buildContent() {
+  Column _buildContent() {
     bool submitEnabled = widget.emailValidator.isValid(_email) &&
         widget.passwordValidator.isValid(_password) &&
         ((_formType == LogInWithEmailFormType.createUser) ==
@@ -122,22 +128,51 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
     final toggleFormTypeButtonText = _formType == LogInWithEmailFormType.logIn
         ? "Don\'t have an account? Create User"
         : 'Already have an account? Log in';
-    return Container(
-        color: Colors.white,
-        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          _buildDisplayNameWidget(),
-          _buildEmailWidget(),
-          _buildPasswordWidget(),
-          SizedBox(height: 8.0),
-          FormSubmitButton(
-            text: submitButtonText,
-            onPressed: submitEnabled ? _submit : null,
-          ),
-          FlatButton(
-            child: Text(toggleFormTypeButtonText),
-            onPressed: _toggleFormType,
-          )
-        ]));
+    return Column(
+      children: <Widget>[
+        _formType == LogInWithEmailFormType.logIn
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                    SocialLogInButton(
+                      //'Log in with Google',
+                      assetPic: 'images/google.png',
+                      height: 60,
+                      onPressed: _logInWithGoogle,
+                    ),
+                    SocialLogInButton(
+                      //'Log in with Twitter',
+                      assetPic: 'images/twitter.png',
+                      height: 60,
+                      onPressed: _logInWithTwitter,
+                    ),
+                    SocialLogInButton(
+                      //'Log in with Github',
+                      assetPic: 'images/github.png',
+                      height: 60,
+                      onPressed: _logInWithGithub,
+                    ),
+                  ])
+            : Container(),
+        SizedBox(height: 26.0),
+        Container(
+            color: Colors.white,
+            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              _buildDisplayNameWidget(),
+              _buildEmailWidget(),
+              _buildPasswordWidget(),
+              SizedBox(height: 8.0),
+              FormSubmitButton(
+                text: submitButtonText,
+                onPressed: submitEnabled ? _submit : null,
+              ),
+              FlatButton(
+                child: Text(toggleFormTypeButtonText),
+                onPressed: _toggleFormType,
+              )
+            ])),
+      ],
+    );
   }
 
 //  DISPLAY NAME WIDGET
@@ -200,5 +235,31 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
       onChanged: (password) => _updateState(),
       onEditingComplete: _submit,
     );
+  }
+
+  Future<void> _logInWithGoogle() async {
+    try {
+      WasteNoneUser user = await auth.logInWihGoogle();
+      print('logged in user: ${user.toJson()}');
+      await db.createUser(user);
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
+  Future<void> _logInWithTwitter() async {
+    try {
+      auth.logInWihTwitter().then((user) => db.createUser(user));
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
+  Future<void> _logInWithGithub() async {
+    try {
+      auth.logInWihGithub().then((user) => db.createUser(user));
+    } catch (e) {
+      print(e.toString());
+    }
   }
 }
