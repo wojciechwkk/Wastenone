@@ -236,20 +236,58 @@ auth.onAuthStateChanged(user => {
         }
 
 
-        // show fridge items based on UID
-        database.ref(`/fridge-list-${uid}`).orderByChild(`expiryDate`).on('value', snapshot => {
+        // // // show fridge items based on UID
+        // // database.ref(`/fridge-list-${uid}`).orderByChild(`expiryDate`).on('value', snapshot => {
+        // //     snapshot.forEach(data => { console.log(data)})
+        // //     document.getElementById('fridge-list-items').innerHTML = ''
+        // //     snapshot.forEach(data => {
+        // //         console.log('got product: ' + data.val().expiryDate + ": " + data.val().item)
+        // //         let p = document.createElement('p')
+        // //         //jQuery:
+        // //         p.textContent = data.val().expiryDate + ": " + data.val().item
+        // //         let deleteButton = document.createElement('button')
+        // //         deleteButton.textContent = 'x'
+        // //         deleteButton.classList.add('delete-button')
+        // //         deleteButton.setAttribute('data', data.key)
+        // //         p.appendChild(deleteButton)
+        // //         document.getElementById('fridge-list-items').appendChild(p)
+        // //     })
+        // // })
+
+        // show fridge items based on UID //.orderByChild(`validDate`)
+        database.ref(`/fridge-contents/`).child(`${uid}-1`).on('value', snapshot => {
             snapshot.forEach(data => { console.log(data)})
             document.getElementById('fridge-list-items').innerHTML = ''
             snapshot.forEach(data => {
-                let p = document.createElement('p')
-                //jQuery:
-                p.textContent = data.val().expiryDate + ": " + data.val().item
-                let deleteButton = document.createElement('button')
-                deleteButton.textContent = 'x'
-                deleteButton.classList.add('delete-button')
-                deleteButton.setAttribute('data', data.key)
-                p.appendChild(deleteButton)
-                document.getElementById('fridge-list-items').appendChild(p)
+                console.log('product: ' + data.val().validDate + ": " + data.val().product_puid)
+                database.ref(`/product/`).orderByChild('puid').equalTo(data.val().product_puid).on('value', psnapshot => {
+                    psnapshot.forEach(pdata => {
+                        let p = document.createElement('p')
+                        oauthProviders.setAttribute('display','inline')
+                        //jQuery:
+                        var img = document.createElement('img')
+                        img.setAttribute('src', pdata.val().picLink);
+                        if(img && img.style) {
+                            img.style.width = '50px'
+                            img.style.height = '50px'
+                        }
+                        
+                        p.append(img)
+                        document.getElementById('fridge-list-items').appendChild(img)
+                        p.textContent = pdata.val().name 
+                        document.getElementById('fridge-list-items').appendChild(p)
+                        let p2 = document.createElement('p')
+                        p2.setAttribute('display','inline')
+                        p2.textContent = data.val().validDate
+                        let deleteButton = document.createElement('button')
+                        deleteButton.textContent = 'x'
+                        deleteButton.classList.add('delete-button')
+                        deleteButton.setAttribute('data', data.key)
+                        p2.appendChild(deleteButton)
+                        document.getElementById('fridge-list-items').appendChild(p2)
+                    })
+                })
+               
             })
         })
     }
