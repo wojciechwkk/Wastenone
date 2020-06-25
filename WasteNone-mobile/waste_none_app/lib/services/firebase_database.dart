@@ -22,12 +22,13 @@ class WNFirebaseDB {
   }
 
   Future<bool> createUser(WasteNoneUser user) async {
-    print('create db user: ${user.toJson()}');
+    print('create db user: ${user?.toJson()}');
     bool userExists = await _userExists(user);
     print('userExists $userExists');
-    if (userExists)
+    if (userExists) {
+      streamController.sink.add(user);
       return false;
-    else {
+    } else {
       String defaultFridge = "${user.uid}-1";
       Fridge fridge = Fridge(defaultFridge, 1);
 //      user.fridgeIDList.add(defaultFridge);

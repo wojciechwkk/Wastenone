@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_twitter_login/flutter_twitter_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,6 +10,7 @@ import 'auth.dart';
 
 class WNFirebaseAuth implements AuthBase {
   var _firebaseAuth = FirebaseAuth.instance;
+  final storage = new FlutterSecureStorage();
 
   WasteNoneUser _userFromFirebase(FirebaseUser user) {
     return (user == null)
@@ -77,6 +79,7 @@ class WNFirebaseAuth implements AuthBase {
     else {
       final googleSignIn = GoogleSignIn();
       await googleSignIn.signOut();
+      TwitterLogin twitterLogin = await createTwitterLogin();
       await twitterLogin.logOut();
       await _firebaseAuth.signOut();
     }
@@ -120,13 +123,19 @@ class WNFirebaseAuth implements AuthBase {
 
 //  ------------------------------ Google --------------------------------------
 //  ------------------------------ Twitter -------------------------------------
-  var twitterLogin = new TwitterLogin(
-    consumerKey: 'lqkhcIN7gru1zWBEHfv07JrMw',
-    consumerSecret: 'd5DDRkgE7oa10EZpH0kOfkMIl3l972QpP9sQ1N0FgUGifJCKNQ',
-  );
+  Future<TwitterLogin> createTwitterLogin() async {
+    var twitterKey = await storage.read(key: 'twitterKey');
+    var twitterSecret = await storage.read(key: 'twitterSecret');
+
+    return new TwitterLogin(
+      consumerKey: twitterKey,
+      consumerSecret: twitterSecret,
+    );
+  }
 
   @override
   Future<WasteNoneUser> logInWihTwitter() async {
+    TwitterLogin twitterLogin = await createTwitterLogin();
     final TwitterLoginResult result = await twitterLogin.authorize();
     switch (result.status) {
       case TwitterLoginStatus.loggedIn:
@@ -148,8 +157,13 @@ class WNFirebaseAuth implements AuthBase {
 
 //  ------------------------------ Twitter -------------------------------------
 //  ------------------------------ Github  -------------------------------------
-  String githubLoginKey = '896604686094f376acb8';
-  String githubLoginSecret = 'b73ad19b4ce6fe31a81c1ef090806882dce66323';
+
+//  // Create storage
+//  final storage = new FlutterSecureStorage();
+//// Store password
+//  await storage.write(key: "password", value: "my-secret-password");
+//// Read value
+//  String myPassword = await storage.read(key: "password");
 
   @override
   Future<WasteNoneUser> logInWihGithub() async {

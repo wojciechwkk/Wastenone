@@ -262,9 +262,9 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   void _scanAction() async {
 //    String eanCode = await _scanBarCode();
-//    var eanCode = '7630040403290';
+    var eanCode = '7630040403290';
 //    var eanCode = '5054563003232';
-    var eanCode = '5900197022548';
+//    var eanCode = '5900197022548';
 
     _loadingProductData = true;
 
