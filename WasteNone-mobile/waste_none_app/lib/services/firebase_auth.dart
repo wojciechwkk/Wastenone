@@ -6,11 +6,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:waste_none_app/app/models/user.dart';
 
-import 'auth.dart';
+import 'base_classes.dart';
 
 class WNFirebaseAuth implements AuthBase {
   var _firebaseAuth = FirebaseAuth.instance;
-  final storage = new FlutterSecureStorage();
 
   WasteNoneUser _userFromFirebase(FirebaseUser user) {
     return (user == null)
@@ -124,8 +123,8 @@ class WNFirebaseAuth implements AuthBase {
 //  ------------------------------ Google --------------------------------------
 //  ------------------------------ Twitter -------------------------------------
   Future<TwitterLogin> createTwitterLogin() async {
-    var twitterKey = await storage.read(key: 'twitterKey');
-    var twitterSecret = await storage.read(key: 'twitterSecret');
+    var twitterKey = await FlutterSecureStorage().read(key: 'twitterKey');
+    var twitterSecret = await FlutterSecureStorage().read(key: 'twitterSecret');
 
     return new TwitterLogin(
       consumerKey: twitterKey,

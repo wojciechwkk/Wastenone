@@ -4,15 +4,18 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_github_api/flutter_github_api.dart';
 import 'package:http/http.dart';
 import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/utils/cryptography_util.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
-import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
 class ScanAndAdd extends StatefulWidget with ProductQtyValidator {
@@ -216,13 +219,22 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     if (product != null) {
       if (widget.qtyValidator.isValid(_qtyTextController.text)) {
         bool isInProductsTable = await db?.isInProductsWNDB(product?.eanCode);
-        if (!isInProductsTable) db?.addToProductsWNDB(product);
+        if (!isInProductsTable) db?.addProduct(product);
 
         FridgeItem fridgeItem = await _prepareFridgeItem(qty);
-        if (fridgeItem != null && !fridgeItem.isEmpty())
-          db?.addToFridge(fridgeItem);
-        print("item added");
-
+        // todo remove
+        WasteNoneUser wasteNoneUser = await auth.currentUser();
+        //todo remove
+        if (fridgeItem != null && !fridgeItem.isEmpty()) {
+          String encryptionPassword =
+              await WNFlutterStorageUtil.readEncryptionPassword(
+                  wasteNoneUser.uid);
+          String encryptedFridgeItem =
+              fridgeItem.asEncodedString(encryptionPassword);
+          //db.addToFridge(fridgeItem, wasteNoneUser.uid);
+          db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_no);
+          print("item added");
+        }
         setState(() {
           productInfo = "";
           productPic = null;
@@ -262,8 +274,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   void _scanAction() async {
 //    String eanCode = await _scanBarCode();
-    var eanCode = '7630040403290';
-//    var eanCode = '5054563003232';
+//     var eanCode = '7630040403290';
+    var eanCode = '5054563003232';
 //    var eanCode = '5900197022548';
 
     _loadingProductData = true;

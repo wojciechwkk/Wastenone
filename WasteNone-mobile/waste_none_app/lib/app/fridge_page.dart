@@ -1,14 +1,18 @@
+import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:waste_none_app/app/scan_and_add/scan_and_add.dart';
+import 'package:waste_none_app/app/utils/cryptography_util.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
-import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 
@@ -17,22 +21,27 @@ import 'models/product.dart';
 import 'models/user.dart';
 
 class FridgePage extends StatefulWidget with ProductQtyValidator {
-  FridgePage({@required this.auth, @required this.db});
+  FridgePage(
+      {@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  final StreamController userStreamCtrl;
 
   @override
   State<StatefulWidget> createState() {
-    return FridgePageState(auth: this.auth, db: this.db);
+    return FridgePageState(
+        auth: this.auth, db: this.db, userStreamCtrl: this.userStreamCtrl);
   }
 }
 
 class FridgePageState extends State<FridgePage> {
-  FridgePageState({@required this.auth, @required this.db});
+  FridgePageState(
+      {@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  final StreamController userStreamCtrl;
 
   WasteNoneUser user;
   Fridge currentFridge;
@@ -73,7 +82,15 @@ class FridgePageState extends State<FridgePage> {
     String welcomeString = 'Hi, $displayName';
     print(welcomeString);
     print('fetch user data from db for: ${fetchedUser.toJson()}');
-    WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
+    // WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
+    String encryptedUserData = await db.getUserData(fetchedUser.uid);
+    String encryptionPassword =
+        await WNFlutterStorageUtil.readEncryptionPassword(fetchedUser.uid);
+    String decryptedFridgeItem =
+        decryptAESCryptoJS(encryptedUserData, encryptionPassword);
+
+    WasteNoneUser userFromDB = WasteNoneUser.fromMap(
+        fetchedUser.dbRef, jsonDecode(decryptedFridgeItem));
     print('full fetch ${userFromDB?.toJson()}');
 
     Fridge fetchedFridge = await db.getFridge("$usersUID-1");
@@ -92,19 +109,29 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _fetchUserFridgeData() async {
     LinkedHashMap<String, Product> products = LinkedHashMap<String, Product>();
-    List<FridgeItem> fetchedFridgeItems =
-        await db?.getFridgeContent(currentFridge?.fridgeID);
-    if (fetchedFridgeItems == null) {
-      print("your fridge is empty");
-    } else {
-      print("recognized fridge: ${currentFridge?.fridgeID}");
 
-      print("found ${fetchedFridgeItems?.length} items in the fridge");
-      if (fetchedFridgeItems?.iterator != null) {
-        for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
-          Product product =
-              await _getProductsDetails(fetchedFridgeItem?.product_puid);
-          products[fetchedFridgeItem?.product_puid] = product;
+    List<FridgeItem> fetchedFridgeItems = null;
+    // List<FridgeItem> fetchedFridgeItems =
+    //     await db?.getFridgeContent(currentFridge?.fridgeID, user.uid);
+    Map<String, String> fetchedEncryptedFridgeItems =
+        await db?.getFridgeEncryptedContent(currentFridge?.fridgeID, user.uid);
+    if (fetchedEncryptedFridgeItems != null) {
+      String encryptionPassword =
+          await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+      fetchedFridgeItems =
+          decryptFridgeList(fetchedEncryptedFridgeItems, encryptionPassword);
+      if (fetchedFridgeItems == null) {
+        print("your fridge is empty");
+      } else {
+        print("recognized fridge: ${currentFridge?.fridgeID}");
+
+        print("found ${fetchedFridgeItems?.length} items in the fridge");
+        if (fetchedFridgeItems?.iterator != null) {
+          for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
+            Product product =
+                await _getProductsDetails(fetchedFridgeItem?.product_puid);
+            products[fetchedFridgeItem?.product_puid] = product;
+          }
         }
       }
     }
@@ -361,7 +388,12 @@ class FridgePageState extends State<FridgePage> {
           "add new fridge user: ${user.toJson()}, fridge count: ${user.fridgesAdded}");
       int newFridgeNo = user.fridgesAdded + 1;
       Fridge newFridge = Fridge("${user.uid}-$newFridgeNo", newFridgeNo);
-      await db.addFridge(user, newFridge);
+      await db.addFridge(newFridge);
+      user.addFridgeID(newFridge.fridgeID);
+
+      String usersEncryptionPass =
+          await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+      db.updateUser(user, user.asEncodedString(usersEncryptionPass));
 
       currentFridge = newFridge;
       _showFridge(user.getFridgeIDs().indexOf(newFridge.fridgeID));
@@ -377,7 +409,11 @@ class FridgePageState extends State<FridgePage> {
       db.emptyFridge(currentFridge.fridgeID);
       _showFridge(usersIndexOfFridge);
     } else {
-      db.deleteFridge(user, currentFridge.fridgeID);
+      db.deleteFridge(currentFridge.fridgeID);
+      user.removeFridgeID(currentFridge.fridgeID);
+      String usersEncryptionPass =
+          await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+      db.updateUser(user, user.asEncodedString(usersEncryptionPass));
       _showFridge(--usersIndexOfFridge);
     }
   }
@@ -454,7 +490,15 @@ class FridgePageState extends State<FridgePage> {
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
     fridgeItem.validDate =
         '${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}';
-    await db.updateFridgeItem(fridgeItem);
+
+    // await db.updateFridgeItem(fridgeItem);
+    String usersEncryptionPass =
+        await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+
+    String encryptedFridgeItem =
+        fridgeItem.asEncodedString(usersEncryptionPass);
+    await db.updateEncryptedFridgeItem(
+        fridgeItem.fridge_no, fridgeItem.dbKey, encryptedFridgeItem);
     _refreshCurrentFridge();
   }
 
@@ -505,7 +549,14 @@ class FridgePageState extends State<FridgePage> {
     print('changeFridgeItemQty');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
     fridgeItem.qty = int.parse(newQty);
-    await db.updateFridgeItem(fridgeItem);
+    // await db.updateFridgeItem(fridgeItem);
+    String usersEncryptionPass =
+        await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+
+    String encryptedFridgeItem =
+        fridgeItem.asEncodedString(usersEncryptionPass);
+    await db.updateEncryptedFridgeItem(
+        fridgeItem.fridge_no, fridgeItem.dbKey, encryptedFridgeItem);
     _refreshCurrentFridge();
   }
 
@@ -567,7 +618,10 @@ class FridgePageState extends State<FridgePage> {
   }
 
   Future<void> _deleteFridgeItem(int index) async {
-    await db.deleteFridgeItem(usersCurrentFridgeItems[index]);
+    // await db.deleteFridgeItem(usersCurrentFridgeItems[index]);
+    FridgeItem toBeDeletedFridgeItem = usersCurrentFridgeItems[index];
+    await db.deleteEncryptedFridgeItem(
+        toBeDeletedFridgeItem.fridge_no, toBeDeletedFridgeItem.dbKey);
     _refreshCurrentFridge();
   }
 
@@ -646,9 +700,15 @@ class FridgePageState extends State<FridgePage> {
 //    if (currentFridge.fridgeID != fridgeID) {
     print('move $index: ${usersCurrentFridgeItems[index].toJson()}');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
-    await db.deleteFridgeItem(fridgeItem);
+    // await db.deleteFridgeItem(fridgeItem);
+    await db.deleteEncryptedFridgeItem(fridgeItem.fridge_no, fridgeItem.dbKey);
     fridgeItem.fridge_no = fridgeID;
-    await db.addToFridge(fridgeItem);
+    // await db.addToFridge(fridgeItem, user.uid);
+
+    String encryptionPassword =
+        await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+    await db.addToFridgeEncrypted(
+        fridgeItem.asEncodedString(encryptionPassword), fridgeItem.fridge_no);
     Navigator.pop(context);
     _refreshCurrentFridge();
 //    }
@@ -677,7 +737,10 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _logOut() async {
     try {
-      await db.deleteUser(user);
+      if (user.isAnonymous()) {
+        await db.deleteUser(user);
+      }
+      userStreamCtrl.sink.add(null);
       await auth.logOut();
     } catch (e) {
       print(e.toString());

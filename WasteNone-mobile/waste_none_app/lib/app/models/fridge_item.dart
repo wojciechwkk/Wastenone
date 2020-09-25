@@ -1,6 +1,8 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:waste_none_app/app/utils/cryptography_util.dart';
 
 class FridgeItem {
   FridgeItem();
@@ -51,6 +53,10 @@ class FridgeItem {
       "validDate": validDate,
       "comment": comment,
     };
+  }
+
+  asEncodedString(String usersEncodingPassword) {
+    return encryptAESCryptoJS(jsonEncode(this), usersEncodingPassword);
   }
 
   bool isEmpty() {
