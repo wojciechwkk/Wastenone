@@ -13,3 +13,7 @@ abstract class AuthBase {
   Future<WasteNoneUser> logInWihGithub();
   Future<void> logOut();
 }
+
+abstract class DBBase {
+  // to be "implemented" interface implemented haha
+}

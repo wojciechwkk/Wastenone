@@ -1,18 +1,25 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/app/log_in/log_in_with_email_widget.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/app/utils/cryptography_util.dart';
+import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 
 import 'log_in_button.dart';
 import 'social_log_in_button.dart';
 
 class LogInPage extends StatelessWidget {
-  LogInPage({@required this.auth, @required this.db});
+  LogInPage(
+      {@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  StreamController<WasteNoneUser> userStreamCtrl;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +47,7 @@ class LogInPage extends StatelessWidget {
             LogInWithEmailForm(
               auth: auth,
               db: db,
+              userStreamCtrl: userStreamCtrl,
             ),
             SizedBox(height: 16.0),
             LogInButton(
@@ -56,15 +64,23 @@ class LogInPage extends StatelessWidget {
 
   Future<void> _logInAnonymously() async {
     try {
-      await _logInAndDBCreate();
+      await _logInAndDBCreateAnon();
     } catch (e) {
       print(e.toString());
     }
   }
 
-  _logInAndDBCreate() async {
+  _logInAndDBCreateAnon() async {
     WasteNoneUser user = await auth.logInAnonymously();
-    print('logged in user: ${user.toJson()}');
-    await db.createUser(user);
+    String encryptionPassword =
+        await WNFlutterStorageUtil.createEncryptionPassword(user.uid);
+
+    String defaultFridgeID = await db.createDefaultFridge(user.uid);
+    user.addFridgeID(defaultFridgeID);
+
+    String encodedUserData = user.asEncodedString(encryptionPassword);
+    await db.createUser(user, encodedUserData);
+
+    userStreamCtrl.sink.add(user);
   }
 }

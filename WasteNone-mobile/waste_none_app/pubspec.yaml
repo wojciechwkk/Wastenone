@@ -38,9 +38,10 @@ dependencies:
   flutter_slidable: ^0.5.4
   uuid: ^2.0.4
   async: ^2.4.1
-  cryptography: ^ 1.4.1
+  cryptography: ^1.4.1
   flutter_secure_storage: ^3.3.3
-
+  tuple: ^1.0.3
+  encrypt: ^4.0.2
 
 
 dev_dependencies:

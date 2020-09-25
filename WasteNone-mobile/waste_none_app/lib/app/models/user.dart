@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
+import 'package:waste_none_app/app/utils/cryptography_util.dart';
 
 class WasteNoneUser {
   WasteNoneUser(this.uid, this.displayName);
@@ -78,5 +79,13 @@ class WasteNoneUser {
 
   List<dynamic> getFridgeIDs() {
     return _fridgeIDs;
+  }
+
+  isAnonymous() {
+    return this.displayName == 'anonymous';
+  }
+
+  asEncodedString(String usersEncodingPassword) {
+    return encryptAESCryptoJS(jsonEncode(this), usersEncodingPassword);
   }
 }

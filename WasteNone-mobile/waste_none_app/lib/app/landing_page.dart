@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 
 import 'fridge_page.dart';
 import 'log_in/log_in_page.dart';
@@ -11,12 +14,15 @@ class LandingSemaphorePage extends StatelessWidget {
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  StreamController<WasteNoneUser> userStreamCtrl = new StreamController();
 
   @override
   Widget build(BuildContext context) {
+    userStreamCtrl.sink.add(null);
     return StreamBuilder<WasteNoneUser>(
 //        stream: auth.onAuthStateChange,
-        stream: db.onDBCreateStateChange,
+//         stream: db.onDBCreateStateChange,
+        stream: userStreamCtrl.stream,
         builder: (context, snapshot) {
 //          print(snapshot.connectionState);
           if (snapshot.connectionState == ConnectionState.active) {
@@ -25,11 +31,13 @@ class LandingSemaphorePage extends StatelessWidget {
               return LogInPage(
                 auth: auth,
                 db: db,
+                userStreamCtrl: userStreamCtrl,
               );
             } else
               return FridgePage(
                 auth: auth,
                 db: db,
+                userStreamCtrl: userStreamCtrl,
               );
           } else {
             return Scaffold(

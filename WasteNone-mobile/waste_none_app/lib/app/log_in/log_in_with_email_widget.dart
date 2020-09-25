@@ -1,31 +1,39 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:waste_none_app/app/log_in/social_log_in_button.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/form_submit_button.dart';
-import 'package:waste_none_app/services/auth.dart';
+import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 
 enum LogInWithEmailFormType { logIn, createUser }
 
 class LogInWithEmailForm extends StatefulWidget
     with EmailAndPasswordStringValidator {
-  LogInWithEmailForm({@required this.auth, @required this.db});
+  LogInWithEmailForm(
+      {@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  StreamController<WasteNoneUser> userStreamCtrl;
 
   @override
-  State<StatefulWidget> createState() =>
-      new _LogInWithEmailFormState(auth: auth, db: db);
+  State<StatefulWidget> createState() => new _LogInWithEmailFormState(
+      auth: auth, db: db, userStreamCtrl: userStreamCtrl);
 }
 
 class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
-  _LogInWithEmailFormState({@required this.auth, @required this.db});
+  _LogInWithEmailFormState(
+      {@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  final StreamController userStreamCtrl;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -66,7 +74,19 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
                 await auth.createUser(_email, _password, _displayName);
             if (firebaseUser != null) {
               firebaseUser.displayName = _displayName;
-              await db.createUser(firebaseUser);
+
+              String encrPassword =
+                  await WNFlutterStorageUtil.createEncryptionPassword(
+                      firebaseUser.uid);
+
+              String defaultFridgeID =
+                  await db.createDefaultFridge(firebaseUser.uid);
+              firebaseUser.addFridgeID(defaultFridgeID);
+
+              String encodedUserData =
+                  firebaseUser.asEncodedString(encrPassword);
+              await db.createUser(firebaseUser, encodedUserData);
+              userStreamCtrl.sink.add(firebaseUser);
             }
             _isLoading = false;
           }
@@ -241,7 +261,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
     try {
       WasteNoneUser user = await auth.logInWihGoogle();
       print('logged in user: ${user.toJson()}');
-      await db.createUser(user);
+      await _createUserIfFirstLogon(user);
     } catch (e) {
       print(e.toString());
     }
@@ -249,7 +269,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
 
   Future<void> _logInWithTwitter() async {
     try {
-      auth.logInWihTwitter().then((user) => db.createUser(user));
+      auth.logInWihTwitter().then((user) => _createUserIfFirstLogon(user));
     } catch (e) {
       print(e.toString());
     }
@@ -257,9 +277,24 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
 
   Future<void> _logInWithGithub() async {
     try {
-      auth.logInWihGithub().then((user) => db.createUser(user));
+      auth.logInWihGithub().then((user) => _createUserIfFirstLogon(user));
     } catch (e) {
       print(e.toString());
     }
+  }
+
+  _createUserIfFirstLogon(WasteNoneUser user) async {
+    //todo: smelly code, change to 1,-1,0, and error handling!
+    bool userExists = await db.userExists(user);
+    if (!userExists) {
+      String encrPass =
+          await WNFlutterStorageUtil.createEncryptionPassword(user.uid);
+
+      String defaultFridgeID = await db.createDefaultFridge(user.uid);
+      user.addFridgeID(defaultFridgeID);
+
+      await db.createUser(user, user.asEncodedString(encrPass));
+    }
+    userStreamCtrl.sink.add(user);
   }
 }
