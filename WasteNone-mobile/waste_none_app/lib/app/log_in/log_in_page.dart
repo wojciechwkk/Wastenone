@@ -1,17 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/app/log_in/log_in_with_email_widget.dart';
-import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/cryptography_util.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
 
 import 'log_in_button.dart';
-import 'social_log_in_button.dart';
 
 class LogInPage extends StatelessWidget {
   LogInPage(
@@ -72,8 +68,7 @@ class LogInPage extends StatelessWidget {
 
   _logInAndDBCreateAnon() async {
     WasteNoneUser user = await auth.logInAnonymously();
-    String encryptionPassword =
-        await WNFlutterStorageUtil.createEncryptionPassword(user.uid);
+    String encryptionPassword = await createEncryptionPassword(user.uid);
 
     String defaultFridgeID = await db.createDefaultFridge(user.uid);
     user.addFridgeID(defaultFridgeID);

@@ -4,13 +4,11 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_github_api/flutter_github_api.dart';
 import 'package:http/http.dart';
 import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/cryptography_util.dart';
 import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
@@ -150,7 +148,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   }
 
 //  _removeFridge() async {
-//    WasteNoneUser wasteNoneUser = await auth?.currentUser();
+//    WasteNoneUser wasteNoneUser = await auth?.AuthResult;
 //    var fridgeNo = "${wasteNoneUser.uid}-$usersFridgeNo";
 //    db?.removeFridge(fridgeNo);
 //  }
@@ -227,13 +225,13 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         //todo remove
         if (fridgeItem != null && !fridgeItem.isEmpty()) {
           String encryptionPassword =
-              await WNFlutterStorageUtil.readEncryptionPassword(
-                  wasteNoneUser.uid);
+              await readEncryptionPassword(wasteNoneUser.uid);
           String encryptedFridgeItem =
               fridgeItem.asEncodedString(encryptionPassword);
           //db.addToFridge(fridgeItem, wasteNoneUser.uid);
           db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_no);
           print("item added");
+          _popupPushNotification(fridgeItem);
         }
         setState(() {
           productInfo = "";
@@ -242,6 +240,10 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         _scanAction();
       }
     }
+  }
+
+  _popupPushNotification(FridgeItem fridgeItem) {
+    // notifications.get
   }
 
   Future<FridgeItem> _prepareFridgeItem(String qty) async {
@@ -273,10 +275,10 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   }
 
   void _scanAction() async {
-//    String eanCode = await _scanBarCode();
-//     var eanCode = '7630040403290';
-    var eanCode = '5054563003232';
-//    var eanCode = '5900197022548';
+    // String eanCode = await _scanBarCode();
+    // var eanCode = '7630040403290';
+//     var eanCode = '5054563003232';
+    var eanCode = '5900197022548';
 
     _loadingProductData = true;
 

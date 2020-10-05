@@ -1,15 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:waste_none_app/app/log_in/social_log_in_button.dart';
-import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/form_submit_button.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
 
 enum LogInWithEmailFormType { logIn, createUser }
 
@@ -76,8 +74,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
               firebaseUser.displayName = _displayName;
 
               String encrPassword =
-                  await WNFlutterStorageUtil.createEncryptionPassword(
-                      firebaseUser.uid);
+                  await createEncryptionPassword(firebaseUser.uid);
 
               String defaultFridgeID =
                   await db.createDefaultFridge(firebaseUser.uid);
@@ -151,7 +148,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
     return Column(
       children: <Widget>[
         _formType == LogInWithEmailFormType.logIn
-            ? Row(
+            ? Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                     SocialLogInButton(
@@ -160,17 +157,13 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
                       height: 60,
                       onPressed: _logInWithGoogle,
                     ),
-                    SocialLogInButton(
-                      //'Log in with Twitter',
-                      assetPic: 'images/twitter.png',
-                      height: 60,
-                      onPressed: _logInWithTwitter,
-                    ),
-                    SocialLogInButton(
-                      //'Log in with Github',
-                      assetPic: 'images/github.png',
-                      height: 60,
-                      onPressed: _logInWithGithub,
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'or',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15.0),
+                      ),
                     ),
                   ])
             : Container(),
@@ -267,28 +260,11 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
     }
   }
 
-  Future<void> _logInWithTwitter() async {
-    try {
-      auth.logInWihTwitter().then((user) => _createUserIfFirstLogon(user));
-    } catch (e) {
-      print(e.toString());
-    }
-  }
-
-  Future<void> _logInWithGithub() async {
-    try {
-      auth.logInWihGithub().then((user) => _createUserIfFirstLogon(user));
-    } catch (e) {
-      print(e.toString());
-    }
-  }
-
   _createUserIfFirstLogon(WasteNoneUser user) async {
     //todo: smelly code, change to 1,-1,0, and error handling!
     bool userExists = await db.userExists(user);
     if (!userExists) {
-      String encrPass =
-          await WNFlutterStorageUtil.createEncryptionPassword(user.uid);
+      String encrPass = await createEncryptionPassword(user.uid);
 
       String defaultFridgeID = await db.createDefaultFridge(user.uid);
       user.addFridgeID(defaultFridgeID);

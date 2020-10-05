@@ -8,7 +8,8 @@ import 'package:waste_none_app/app/models/fridge_item.dart';
 
 String encryptAESCryptoJS(String plainText, String passphrase) {
   try {
-    print('encrypt plainText = $plainText, pass = $passphrase');
+    if (plainText == null) print('plainText is null: $plainText');
+    if (passphrase == null) print('passphrase is null: $passphrase');
     final salt = genRandomWithNonZero(8);
     var keyndIV = deriveKeyAndIV(passphrase, salt);
     final key = encrypt.Key(keyndIV.item1);
@@ -27,6 +28,8 @@ String encryptAESCryptoJS(String plainText, String passphrase) {
 
 String decryptAESCryptoJS(String encrypted, String passphrase) {
   try {
+    if (encrypted == null) print('encrypted is null: $encrypted');
+    if (passphrase == null) print('passphrase is null: $passphrase');
     Uint8List encryptedBytesWithSalt = base64.decode(encrypted);
 
     Uint8List encryptedBytes =
@@ -92,6 +95,7 @@ List<FridgeItem> decryptFridgeList(
     Map<String, String> encryptedFridgeItems, String encryptionPassword) {
   List<FridgeItem> decryptedFridgeList = List<FridgeItem>();
   for (String encryptedItemKey in encryptedFridgeItems.keys) {
+    print('about to decrypt item, gotem ${encryptedFridgeItems.keys.length}');
     String decryptedFridgeItem = decryptAESCryptoJS(
         encryptedFridgeItems[encryptedItemKey], encryptionPassword);
 

@@ -6,7 +6,8 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:waste_none_app/app/scan_and_add/scan_and_add.dart';
+import 'package:waste_none_app/app/scan_and_add.dart';
+import 'package:waste_none_app/app/settings_window.dart';
 import 'package:waste_none_app/app/utils/cryptography_util.dart';
 import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
@@ -76,7 +77,7 @@ class FridgePageState extends State<FridgePage> {
   }
 
   Future<void> _fetchUserdata() async {
-    WasteNoneUser fetchedUser = await auth.currentUser();
+    WasteNoneUser fetchedUser = auth.currentUser();
     String usersUID = fetchedUser.uid;
     String displayName = fetchedUser.displayName;
     String welcomeString = 'Hi, $displayName';
@@ -84,8 +85,8 @@ class FridgePageState extends State<FridgePage> {
     print('fetch user data from db for: ${fetchedUser.toJson()}');
     // WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
     String encryptedUserData = await db.getUserData(fetchedUser.uid);
-    String encryptionPassword =
-        await WNFlutterStorageUtil.readEncryptionPassword(fetchedUser.uid);
+    String encryptionPassword = await readEncryptionPassword(fetchedUser.uid);
+    print('about to decrypt user data for ${fetchedUser.displayName}');
     String decryptedFridgeItem =
         decryptAESCryptoJS(encryptedUserData, encryptionPassword);
 
@@ -116,8 +117,7 @@ class FridgePageState extends State<FridgePage> {
     Map<String, String> fetchedEncryptedFridgeItems =
         await db?.getFridgeEncryptedContent(currentFridge?.fridgeID, user.uid);
     if (fetchedEncryptedFridgeItems != null) {
-      String encryptionPassword =
-          await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+      String encryptionPassword = await readEncryptionPassword(user.uid);
       fetchedFridgeItems =
           decryptFridgeList(fetchedEncryptedFridgeItems, encryptionPassword);
       if (fetchedFridgeItems == null) {
@@ -158,7 +158,9 @@ class FridgePageState extends State<FridgePage> {
 //    indexOfFridge++;
     final fridgeLabel = currentFridge?.displayName != null
         ? currentFridge.displayName
-        : indexOfFridge != null ? "fridge ${indexOfFridge + 1}" : "fridge";
+        : indexOfFridge != null
+            ? "fridge ${indexOfFridge + 1}"
+            : "fridge";
 
     return FutureBuilder(
       future: this.initUserData(),
@@ -166,9 +168,21 @@ class FridgePageState extends State<FridgePage> {
         if (snapshot.connectionState == ConnectionState.done) {
           return Scaffold(
             appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
-              FlatButton(
-                  child: Text('Logout', style: TextStyle(fontSize: 18)),
-                  onPressed: _logOut)
+              // FlatButton(
+              // child: Text('Logout', style: TextStyle(fontSize: 18)),
+              // onPressed: _logOut)
+
+              PopupMenuButton<String>(
+                onSelected: _appBarSettingsClick,
+                itemBuilder: (BuildContext context) {
+                  return {'Settings', 'Logout'}.map((String choice) {
+                    return PopupMenuItem<String>(
+                      value: choice,
+                      child: Text(choice),
+                    );
+                  }).toList();
+                },
+              ),
             ]),
             body: Stack(
               children: <Widget>[
@@ -225,6 +239,28 @@ class FridgePageState extends State<FridgePage> {
         }
       },
     );
+  }
+
+  void _appBarSettingsClick(String value) {
+    switch (value) {
+      case 'Logout':
+        _logOut();
+        break;
+      case 'Settings':
+        _showSettingsPopup();
+        break;
+    }
+  }
+
+  void _showSettingsPopup() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => SettingsWindow(
+                  auth: auth,
+                  db: db,
+                  user: user,
+                ))); //.whenComplete(() => ());
   }
 
   Widget _sliderHeaderWidget(String fridgeName) {
@@ -391,8 +427,7 @@ class FridgePageState extends State<FridgePage> {
       await db.addFridge(newFridge);
       user.addFridgeID(newFridge.fridgeID);
 
-      String usersEncryptionPass =
-          await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+      String usersEncryptionPass = await readEncryptionPassword(user.uid);
       db.updateUser(user, user.asEncodedString(usersEncryptionPass));
 
       currentFridge = newFridge;
@@ -411,8 +446,7 @@ class FridgePageState extends State<FridgePage> {
     } else {
       db.deleteFridge(currentFridge.fridgeID);
       user.removeFridgeID(currentFridge.fridgeID);
-      String usersEncryptionPass =
-          await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+      String usersEncryptionPass = await readEncryptionPassword(user.uid);
       db.updateUser(user, user.asEncodedString(usersEncryptionPass));
       _showFridge(--usersIndexOfFridge);
     }
@@ -492,8 +526,7 @@ class FridgePageState extends State<FridgePage> {
         '${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}';
 
     // await db.updateFridgeItem(fridgeItem);
-    String usersEncryptionPass =
-        await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+    String usersEncryptionPass = await readEncryptionPassword(user.uid);
 
     String encryptedFridgeItem =
         fridgeItem.asEncodedString(usersEncryptionPass);
@@ -550,8 +583,7 @@ class FridgePageState extends State<FridgePage> {
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
     fridgeItem.qty = int.parse(newQty);
     // await db.updateFridgeItem(fridgeItem);
-    String usersEncryptionPass =
-        await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+    String usersEncryptionPass = await readEncryptionPassword(user.uid);
 
     String encryptedFridgeItem =
         fridgeItem.asEncodedString(usersEncryptionPass);
@@ -705,8 +737,7 @@ class FridgePageState extends State<FridgePage> {
     fridgeItem.fridge_no = fridgeID;
     // await db.addToFridge(fridgeItem, user.uid);
 
-    String encryptionPassword =
-        await WNFlutterStorageUtil.readEncryptionPassword(user.uid);
+    String encryptionPassword = await readEncryptionPassword(user.uid);
     await db.addToFridgeEncrypted(
         fridgeItem.asEncodedString(encryptionPassword), fridgeItem.fridge_no);
     Navigator.pop(context);

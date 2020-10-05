@@ -1,19 +1,13 @@
 import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 
-import '../app/utils/cryptography_util.dart';
-
 class WNFirebaseDB implements DBBase {
-  WNFirebaseDB() {}
-
   final _firebaseDB = FirebaseDatabase.instance;
 // --------------------------------------- user --------------------------------
 
@@ -108,7 +102,6 @@ class WNFirebaseDB implements DBBase {
 
       var fridgeResult = List<Fridge>();
       for (var fridgeKey in fridgeMap.keys) {
-//        print("halo: $fridgeKey: ${fridgeMap[fridgeKey]}");
         var fridge = Map<String, dynamic>.from(fridgeMap[fridgeKey]);
         for (var subFridgeKey in fridge.keys) {
           fridgeResult.add(Fridge.fromMap(subFridgeKey, fridge[subFridgeKey]));

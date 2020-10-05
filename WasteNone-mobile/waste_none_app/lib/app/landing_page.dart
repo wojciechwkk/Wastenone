@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
 
 import 'fridge_page.dart';
 import 'log_in/log_in_page.dart';
