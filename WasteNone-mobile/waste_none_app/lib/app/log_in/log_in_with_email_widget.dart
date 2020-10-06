@@ -151,6 +151,14 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Text(
+                        'Login with',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15.0),
+                      ),
+                    ),
                     SocialLogInButton(
                       //'Log in with Google',
                       assetPic: 'images/google.png',
@@ -171,6 +179,17 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
         Container(
             color: Colors.white,
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              Visibility(
+                visible: _formType == LogInWithEmailFormType.createUser,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    'New account',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15.0),
+                  ),
+                ),
+              ),
               _buildDisplayNameWidget(),
               _buildEmailWidget(),
               _buildPasswordWidget(),
