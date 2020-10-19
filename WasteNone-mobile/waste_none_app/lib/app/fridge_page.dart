@@ -47,9 +47,6 @@ class FridgePageState extends State<FridgePage> {
   WasteNoneUser user;
   Fridge currentFridge;
 
-//  int currentFridgeNo = 1; //default value ugly hardcode
-//  String fridgeID;
-
   int fridgeItemCount;
   List<FridgeItem> usersCurrentFridgeItems;
   Map<String, Product> usersCurrentProducts;
@@ -64,7 +61,6 @@ class FridgePageState extends State<FridgePage> {
     super.initState();
     _loadingUserData = true;
     fridgeItemCount = 0;
-    //_fetchUserdata().then((value) => _fetchUserFridgeData());
   }
 
   final AsyncMemoizer _memoizer = AsyncMemoizer();

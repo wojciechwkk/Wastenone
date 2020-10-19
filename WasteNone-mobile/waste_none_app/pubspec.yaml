@@ -24,7 +24,7 @@ dependencies:
   firebase_core: ^0.5.0
   firebase_auth: ^0.18.1+1
   firebase_database: ^4.1.0
-  firebase_messaging: ^7.0.2
+  firebase_messaging: ^7.0.3
 
   # Dependencies
   cupertino_icons: ^0.1.2
@@ -41,7 +41,7 @@ dependencies:
   flutter_secure_storage: ^3.3.3
   tuple: ^1.0.3
   encrypt: ^4.0.2
-  day_night_time_picker: ^0.2.1
+  flutter_settings_screens: ^0.2.1
 
 
 

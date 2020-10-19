@@ -1,13 +1,13 @@
+import 'dart:math';
+
 import 'package:async/async.dart';
-import 'package:day_night_time_picker/day_night_time_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/settings_util.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
 
 class SettingsWindow extends StatefulWidget {
   SettingsWindow({@required this.auth, @required this.db, @required this.user});
@@ -30,15 +30,52 @@ class _SettingsWindowState extends State<SettingsWindow> {
   final WasteNoneUser user;
 
   final AsyncMemoizer _memoizer = AsyncMemoizer();
-  TimeOfDay _notificationTime = TimeOfDay(hour: 9, minute: 0);
-  bool _notificationTimeChanged = false;
-  bool _is24hrsFormat = false;
-  bool _timeFormatChanged = false;
+
+  String TIME_FORMAT_KEY;
+  String AM_PM_KEY;
+  String EXPIRE_NOTIFY_DAYS_KEY;
+  String EXPIRE_NOTIFY_HRS_KEY;
+
+  bool _is24hrsFormat;
+  String _ampmForWidget;
+  double _notifyDaysBefore;
+  double _notifyAtForWidget;
+  double _maxNotifyTimeScale;
 
   _setInitTimeFormat() {
     return this._memoizer.runOnce(() async {
-      _is24hrsFormat = await isUsersTimeFormat24hs(user, context);
-      _notificationTime = await getNotificationTime(user);
+      _setSettingsKeys();
+
+      _is24hrsFormat = Settings.getValue(
+          this.TIME_FORMAT_KEY, MediaQuery.of(context).alwaysUse24HourFormat);
+      _maxNotifyTimeScale = _is24hrsFormat ? 23.0 : 11.0;
+      _notifyAtForWidget = Settings.getValue(this.EXPIRE_NOTIFY_HRS_KEY, 8);
+      _notifyDaysBefore = Settings.getValue(this.EXPIRE_NOTIFY_DAYS_KEY, 2);
+      _ampmForWidget = Settings.getValue(this.AM_PM_KEY, false) ? 'pm' : 'am';
+      // Settings.clearCache();
+    });
+  }
+
+  void _setSettingsKeys() {
+    TIME_FORMAT_KEY = '${user.uid}-24hrs-format';
+    AM_PM_KEY = '${user.uid}-am-pm';
+    EXPIRE_NOTIFY_DAYS_KEY = '${user.uid}-expiry-notify-days';
+    EXPIRE_NOTIFY_HRS_KEY = '${user.uid}-expiry-notify-hours';
+  }
+
+  _changeTimeFormat(bool is24hrs) {
+    setState(() {
+      _is24hrsFormat = is24hrs;
+      if (is24hrs) {
+        _maxNotifyTimeScale = 23.0;
+        if (_ampmForWidget == 'pm') {
+          _notifyAtForWidget += 12.0;
+        }
+      } else {
+        _maxNotifyTimeScale = 11.0;
+        _ampmForWidget = _notifyAtForWidget ~/ 12 == 0 ? 'am' : 'pm';
+        _notifyAtForWidget %= 12;
+      }
     });
   }
 
@@ -49,101 +86,76 @@ class _SettingsWindowState extends State<SettingsWindow> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           return Scaffold(
-            appBar: AppBar(title: Text('Settings'), actions: <Widget>[]),
-            body: Container(
-              child: Column(
-                children: [
-                  Text(
-                    '',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 30.0, top: 20.0),
-                    child: Row(
+              appBar: AppBar(title: Text('Settings'), actions: <Widget>[]),
+              body: Center(
+                child: Column(
+                  children: <Widget>[
+                    ExpandableSettingsTile(
+                      title: 'Expiry notifications',
                       children: [
-                        Text(
-                          'Time format:  ',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16.0),
-                        ),
-                        FlatButton(
-                          onPressed: () {
-                            _setTimeFormat(TimeFormatEnum.ampm);
+                        SliderSettingsTile(
+                          title: 'notify days before:',
+                          settingKey: this.EXPIRE_NOTIFY_DAYS_KEY,
+                          defaultValue: 2,
+                          min: 1,
+                          max: 9,
+                          step: 1,
+                          leading: Icon(Icons.calendar_today_outlined),
+                          onChange: (value) {
+                            debugPrint('expiry-notify-days: $value');
+                            setState(() {
+                              _notifyDaysBefore = value;
+                            });
                           },
-                          child: Text('am/pm'),
+                          subtitle: '${_notifyDaysBefore.toInt()} days',
                         ),
-                        Text(' or '),
-                        FlatButton(
-                          onPressed: () {
-                            _setTimeFormat(TimeFormatEnum.a24h);
-                          },
-                          child: Text('24-hour'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 30.0, top: 20.0),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Notification time:  ',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16.0),
-                        ),
-                        Text(_formatTime(_notificationTime.hour)),
-                        FlatButton(
-                          onPressed: () {
-                            Navigator.of(context).push(showPicker(
-                                context: context,
-                                value: _notificationTime,
-                                onChange: _onNotificationTimeChanged,
-                                is24HrFormat: _is24hrsFormat,
-                                sunAsset: Image(
-                                  image: AssetImage(
-                                    "packages/day_night_time_picker/assets/sun.png",
-                                  ),
-                                )));
-                          },
-                          child: Text(
-                            'Set',
-                            // style: TextStyle(color: Colors.white),
+                        Visibility(
+                          visible: !_is24hrsFormat,
+                          child: SwitchSettingsTile(
+                            settingKey: this.AM_PM_KEY,
+                            title: 'AM / PM',
+                            disabledLabel: 'am',
+                            enabledLabel: 'pm',
+                            presetValue: _ampmForWidget == 'pm',
+                            onChange: (value) {
+                              setState(() {
+                                _ampmForWidget = value == true ? 'pm' : 'am';
+                              });
+                            },
                           ),
                         ),
+                        NotifyTimeSliderSettingsTile(
+                          title: 'notify at:',
+                          settingKey: this.EXPIRE_NOTIFY_HRS_KEY,
+                          defaultValue: 8.0,
+                          min: 0.0,
+                          max: _maxNotifyTimeScale,
+                          step: 1,
+                          leading: Icon(Icons.access_time_sharp),
+                          presetValue: _notifyAtForWidget,
+                          onChange: (value) {
+                            setState(() {
+                              _notifyAtForWidget = value;
+                            });
+                          },
+                          subtitle:
+                              '${_formatTime(_notifyAtForWidget.toInt())}',
+                        ),
                       ],
                     ),
-                  )
-                ],
-              ),
-              // ),
-            ),
-            floatingActionButton: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: FloatingActionButton.extended(
-                    onPressed: _cancel,
-                    label: Text("Cancel"),
-                    icon: Icon(Icons.cancel),
-                    heroTag: null,
-                  ),
+                    SwitchSettingsTile(
+                      settingKey: this.TIME_FORMAT_KEY,
+                      title: 'Time format',
+                      enabledLabel: '24-hour',
+                      disabledLabel: 'AM/PM',
+                      leading: Icon(Icons.accessibility_new_rounded),
+                      onChange: (value) {
+                        _changeTimeFormat(value);
+                      },
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: FloatingActionButton.extended(
-                    onPressed: _apply,
-                    label: Text("Save"),
-                    icon: Icon(Icons.check_circle),
-                    heroTag: null,
-                  ),
-                ),
-              ],
-            ),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
-          );
+              ));
         } else {
           return LoadingIndicator();
         }
@@ -151,43 +163,11 @@ class _SettingsWindowState extends State<SettingsWindow> {
     );
   }
 
-  void _setTimeFormat(TimeFormatEnum timeFormatEnum) {
-    _timeFormatChanged = true;
-    setState(() {
-      _is24hrsFormat = timeFormatEnum == TimeFormatEnum.a24h;
-    });
-  }
-
-  void _onNotificationTimeChanged(TimeOfDay newTime) {
-    _notificationTimeChanged = true;
-    setState(() {
-      _notificationTime = newTime;
-    });
-  }
-
   String _formatTime(int hour) {
     if (_is24hrsFormat)
       return '${hour.toString()}:00';
     else {
-      return hour < 12 ? '${hour}AM' : '${hour % 12}PM';
+      return '$hour$_ampmForWidget';
     }
-  }
-
-  _cancel() {
-    _timeFormatChanged = false;
-    _notificationTimeChanged = false;
-    Navigator.pop(context);
-  }
-
-  _apply() {
-    if (_timeFormatChanged) {
-      var timeFormat =
-          _is24hrsFormat ? TimeFormatEnum.a24h : TimeFormatEnum.ampm;
-      storeUsersTimeFormat(user, timeFormat);
-    }
-    if (_notificationTimeChanged) {
-      storeUsersPushNotificationTime(user, _notificationTime.hour.toString());
-    }
-    Navigator.pop(context);
   }
 }

@@ -4,10 +4,12 @@ import 'package:waste_none_app/app/landing_page.dart';
 import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/services/firebase_auth.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await Settings.init();
   runApp(WasteNoneApp());
 }
 
