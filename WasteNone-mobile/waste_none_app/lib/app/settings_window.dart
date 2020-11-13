@@ -5,9 +5,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/utils/settings_util.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:waste_none_app/services/flutter_notification.dart';
 
 class SettingsWindow extends StatefulWidget {
   SettingsWindow({@required this.auth, @required this.db, @required this.user});
@@ -17,13 +19,11 @@ class SettingsWindow extends StatefulWidget {
   final WasteNoneUser user;
 
   @override
-  _SettingsWindowState createState() =>
-      _SettingsWindowState(auth: this.auth, db: this.db, user: this.user);
+  _SettingsWindowState createState() => _SettingsWindowState(auth: this.auth, db: this.db, user: this.user);
 }
 
 class _SettingsWindowState extends State<SettingsWindow> {
-  _SettingsWindowState(
-      {@required this.auth, @required this.db, @required this.user});
+  _SettingsWindowState({@required this.auth, @required this.db, @required this.user});
 
   final AuthBase auth;
   final WNFirebaseDB db;
@@ -46,8 +46,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
     return this._memoizer.runOnce(() async {
       _setSettingsKeys();
 
-      _is24hrsFormat = Settings.getValue(
-          this.TIME_FORMAT_KEY, MediaQuery.of(context).alwaysUse24HourFormat);
+      _is24hrsFormat = Settings.getValue(this.TIME_FORMAT_KEY, MediaQuery.of(context).alwaysUse24HourFormat);
       _maxNotifyTimeScale = _is24hrsFormat ? 23.0 : 11.0;
       _notifyAtForWidget = Settings.getValue(this.EXPIRE_NOTIFY_HRS_KEY, 8);
       _notifyDaysBefore = Settings.getValue(this.EXPIRE_NOTIFY_DAYS_KEY, 2);
@@ -57,10 +56,10 @@ class _SettingsWindowState extends State<SettingsWindow> {
   }
 
   void _setSettingsKeys() {
-    TIME_FORMAT_KEY = '${user.uid}-24hrs-format';
-    AM_PM_KEY = '${user.uid}-am-pm';
-    EXPIRE_NOTIFY_DAYS_KEY = '${user.uid}-expiry-notify-days';
-    EXPIRE_NOTIFY_HRS_KEY = '${user.uid}-expiry-notify-hours';
+    TIME_FORMAT_KEY = getSettingsKey(SettingsKeysEnum.TIME_FORMAT, user.uid);
+    AM_PM_KEY = getSettingsKey(SettingsKeysEnum.AM_PM, user.uid);
+    EXPIRE_NOTIFY_DAYS_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_DAYS, user.uid);
+    EXPIRE_NOTIFY_HRS_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid);
   }
 
   _changeTimeFormat(bool is24hrs) {
@@ -102,7 +101,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
                           step: 1,
                           leading: Icon(Icons.calendar_today_outlined),
                           onChange: (value) {
-                            debugPrint('expiry-notify-days: $value');
+                            // debugPrint('expiry-notify-days: $value');
                             setState(() {
                               _notifyDaysBefore = value;
                             });
@@ -138,8 +137,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
                               _notifyAtForWidget = value;
                             });
                           },
-                          subtitle:
-                              '${_formatTime(_notifyAtForWidget.toInt())}',
+                          subtitle: '${_formatTime(_notifyAtForWidget.toInt())}',
                         ),
                       ],
                     ),
@@ -153,6 +151,16 @@ class _SettingsWindowState extends State<SettingsWindow> {
                         _changeTimeFormat(value);
                       },
                     ),
+                    SimpleSettingsTile(
+                      title: 'Clear notifications',
+                      subtitle: '',
+                      onTap: _clearNotifications,
+                    ),
+                    SimpleSettingsTile(
+                      title: 'Print notifications',
+                      subtitle: '',
+                      onTap: _printNotifications,
+                    ),
                   ],
                 ),
               ));
@@ -161,6 +169,16 @@ class _SettingsWindowState extends State<SettingsWindow> {
         }
       },
     );
+  }
+
+  void _clearNotifications() {
+    print('clear notifications');
+    FlutterNotification().clearNotifications();
+  }
+
+  void _printNotifications() async {
+    print('print notifications');
+    FlutterNotification().printNotifications();
   }
 
   String _formatTime(int hour) {

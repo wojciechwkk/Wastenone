@@ -2,9 +2,19 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
 import 'package:waste_none_app/app/utils/cryptography_util.dart';
 
-class FridgeItem {
+/*
+  String dbKey;
+  String fuid;
+  String fridge_no;
+  String product_puid;
+  int qty;
+  String validDate;
+  String comment;
+ */
+class FridgeItem implements Comparable {
   FridgeItem();
 
   String dbKey;
@@ -61,5 +71,18 @@ class FridgeItem {
 
   bool isEmpty() {
     return fridge_no == null || product_puid == null;
+  }
+
+  @override
+  int compareTo(other) {
+    DateTime thisDate = new DateFormat("yyyy-MM-dd").parse(this.validDate);
+    DateTime otherDate = new DateFormat("yyyy-MM-dd").parse(other.validDate);
+    // print(
+    //     '${this.validDate}: ${thisDate.month}-${thisDate.day} compare to ${other.validDate}: ${otherDate.month}-${otherDate.day}');
+    return thisDate.compareTo(otherDate);
+  }
+
+  DateTime getValidDateAsDate() {
+    return new DateFormat("yyyy-MM-dd").parse(this.validDate);
   }
 }

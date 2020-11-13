@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
@@ -13,6 +14,7 @@ class LandingSemaphorePage extends StatelessWidget {
 
   final AuthBase auth;
   final WNFirebaseDB db;
+
   StreamController<WasteNoneUser> userStreamCtrl = new StreamController();
 
   @override

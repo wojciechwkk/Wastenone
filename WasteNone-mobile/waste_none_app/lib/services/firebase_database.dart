@@ -242,6 +242,8 @@ class WNFirebaseDB implements DBBase {
         fridgeItemsResult.add(
             FridgeItem.fromMap(fridgeItemKey, fridgeItemsMap[fridgeItemKey]));
       }
+      print('sorting fridhe');
+      fridgeItemsResult.sort();
       return fridgeItemsResult;
     }
     return null;

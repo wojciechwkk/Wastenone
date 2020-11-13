@@ -4,6 +4,31 @@ import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/storage_util.dart';
 
 enum TimeFormatEnum { ampm, a24h }
+enum SettingsKeysEnum {
+  TIME_FORMAT,
+  AM_PM,
+  NOTIFY_EXPIRY_DAYS,
+  NOTIFY_EXPIRY_HRS
+}
+
+String getSettingsKey(SettingsKeysEnum settingsKeyEnum, String userUid) {
+  switch (settingsKeyEnum) {
+    case SettingsKeysEnum.TIME_FORMAT:
+      return '$userUid-24hrs-format';
+      break;
+    case SettingsKeysEnum.AM_PM:
+      return '$userUid-am-pm';
+      break;
+    case SettingsKeysEnum.NOTIFY_EXPIRY_DAYS:
+      return '$userUid-expiry-notify-days';
+      break;
+    case SettingsKeysEnum.NOTIFY_EXPIRY_HRS:
+      return '$userUid-expiry-notify-hours';
+      break;
+    default:
+      return '';
+  }
+}
 
 Future<bool> isUsersTimeFormat24hs(
     WasteNoneUser user, BuildContext context) async {

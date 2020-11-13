@@ -4,6 +4,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart';
 import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
@@ -15,29 +16,49 @@ import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:waste_none_app/services/flutter_notification.dart';
+
+import 'models/fridge.dart';
 
 class ScanAndAdd extends StatefulWidget with ProductQtyValidator {
-  ScanAndAdd({@required this.auth, @required this.db, @required this.fridgeId});
+  ScanAndAdd({
+    @required this.auth,
+    @required this.db,
+    @required this.fridge,
+    @required this.user,
+  });
 
   final AuthBase auth;
   final WNFirebaseDB db;
-  final String fridgeId;
+  final Fridge fridge;
+  final WasteNoneUser user;
 
   @override
-  _ScanAndAddState createState() =>
-      _ScanAndAddState(auth: this.auth, db: this.db, fridgeId: this.fridgeId);
+  _ScanAndAddState createState() => _ScanAndAddState(
+        auth: this.auth,
+        db: this.db,
+        fridge: this.fridge,
+        user: this.user,
+      );
 }
 
 class _ScanAndAddState extends State<ScanAndAdd> {
   _ScanAndAddState(
-      {@required this.auth, @required this.db, @required this.fridgeId});
+      {@required this.auth,
+      @required this.db,
+      @required this.fridge,
+      @required this.user,
+      @required this.notificationsPlugin});
 
   final AuthBase auth;
   final WNFirebaseDB db;
+  final WasteNoneUser user;
+  final FlutterLocalNotificationsPlugin notificationsPlugin;
 
-  final String fridgeId;
+  final Fridge fridge;
 
   Product product;
+
 //  String usersFridgeNo = "1"; //default to be extended;
 
   String welcomeText = "WasteNone";
@@ -47,18 +68,19 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   bool _loadingProductData = false;
 
   DateTime selectedDate = DateTime.now();
+  DateTime defaultSelectedDate = new DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day + 1);
   bool _productFetched = false;
 
   @override
   void initState() {
     super.initState();
+    selectedDate = defaultSelectedDate;
     _scanAction();
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget loadingIndicator =
-        _loadingProductData ? LoadingIndicator() : Container();
+    Widget loadingIndicator = _loadingProductData ? LoadingIndicator() : Container();
 
     return Scaffold(
       appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
@@ -69,50 +91,48 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       ]),
       body: Stack(
         children: <Widget>[
-          Center(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(top: 30, left: 8, right: 8),
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.30,
-                          child: ProductImage(picLink: productPic),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 30),
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.6,
-                          child: AutoSizeText(
-                            productInfo,
-                            style: new TextStyle(fontSize: 15.0),
+          SingleChildScrollView(
+            child: Center(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 30, left: 8, right: 8),
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.30,
+                            child: ProductImage(picLink: productPic),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Visibility(
-                    visible: _productFetched,
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 120, left: 20, right: 20),
-                      child: CalendarDatePicker(
-                        firstDate: DateTime.now(),
-                        initialDate: new DateTime(DateTime.now().year,
-                            DateTime.now().month, DateTime.now().day + 1),
-                        lastDate: DateTime(DateTime.now().year + 5,
-                            DateTime.now().month, DateTime.now().day),
-                        initialCalendarMode: DatePickerMode.day,
-                        onDateChanged: _dateChanged,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 30),
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.6,
+                            child: AutoSizeText(
+                              productInfo,
+                              style: new TextStyle(fontSize: 15.0),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Visibility(
+                      visible: _productFetched,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 120, left: 20, right: 20),
+                        child: CalendarDatePicker(
+                          firstDate: DateTime.now(),
+                          initialDate: selectedDate,
+                          lastDate: DateTime(DateTime.now().year + 5, DateTime.now().month, DateTime.now().day),
+                          initialCalendarMode: DatePickerMode.day,
+                          onDateChanged: _dateChanged,
+                        ),
                       ),
                     ),
-                  ),
-                ]),
+                  ]),
+            ),
           ),
           Align(
             child: loadingIndicator,
@@ -127,8 +147,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
             Visibility(
               visible: _productFetched,
               child: FloatingActionButton.extended(
-                  onPressed: () =>
-                      _showQtyDialog(context), //_showQtyDialog(context),
+                  onPressed: () => _showQtyDialog(context), //_showQtyDialog(context),
                   label: Text("Add"),
                   icon: Icon(Icons.ac_unit),
                   heroTag: "addbut"),
@@ -145,6 +164,15 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           ]),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
+  }
+
+  void _dateChanged(DateTime picked) {
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+    return null;
   }
 
 //  _removeFridge() async {
@@ -178,17 +206,13 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                 new Expanded(
                   child: new TextFormField(
                     controller: _qtyTextController,
-                    inputFormatters: <TextInputFormatter>[
-                      WhitelistingTextInputFormatter.digitsOnly
-                    ],
+                    inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                     keyboardType: TextInputType.number,
                     autofocus: true,
                     decoration: new InputDecoration(
                       labelText: 'Add quantity',
                       enabled: true,
-                      errorText: widget.qtyValidator.isValid(_qty)
-                          ? widget.qtyErrorText
-                          : null,
+                      errorText: widget.qtyValidator.isValid(_qty) ? widget.qtyErrorText : null,
                     ),
                     onChanged: (qty) => _qtyChangedState,
 //                    validator: () => ProductQtyValueVaidator();
@@ -224,42 +248,43 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         WasteNoneUser wasteNoneUser = await auth.currentUser();
         //todo remove
         if (fridgeItem != null && !fridgeItem.isEmpty()) {
-          String encryptionPassword =
-              await readEncryptionPassword(wasteNoneUser.uid);
-          String encryptedFridgeItem =
-              fridgeItem.asEncodedString(encryptionPassword);
+          String encryptionPassword = await readEncryptionPassword(wasteNoneUser.uid);
+          String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
           //db.addToFridge(fridgeItem, wasteNoneUser.uid);
           db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_no);
+
           print("item added");
-          _popupPushNotification(fridgeItem);
+          Product product = await db.getProductByPUID(fridgeItem.product_puid);
+          // FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
+          FlutterNotification().addExpiryNotification(user, product, fridgeItem);
         }
         setState(() {
           productInfo = "";
           productPic = null;
         });
+
+        selectedDate = defaultSelectedDate;
+
         _scanAction();
       }
     }
   }
 
-  _popupPushNotification(FridgeItem fridgeItem) {
-    // notifications.get
-  }
-
   Future<FridgeItem> _prepareFridgeItem(String qty) async {
     FridgeItem fridgeItem = FridgeItem();
     WasteNoneUser wasteNoneUser = await auth.currentUser();
-    fridgeItem.fridge_no = fridgeId;
+    fridgeItem.fridge_no = fridge.fridgeID;
     fridgeItem.product_puid = product?.puid;
     fridgeItem.qty = num.parse(qty);
-    fridgeItem.validDate =
-        "${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}";
+    fridgeItem.validDate = "${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}";
     fridgeItem.comment = "comment 1";
     return fridgeItem;
   }
 
 //---------------------------------- /adding item ------------------------------
+//------------------------------ expiry notification  --------------------------
 
+//----------------------------- /expiry notification  --------------------------
 //---------------------------------- scan item ---------------------------------
 
   Future<String> _scanBarCode() async {
@@ -267,10 +292,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       autoEnableFlash: true,
     );
     var result = await BarcodeScanner.scan(options: options);
-
     print(productInfo);
     var eanCode = result.rawContent.toString();
-
     return eanCode;
   }
 
@@ -321,15 +344,11 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     print("about to fetch product data from GS1 DB");
     final gs1uri = "https://produktywsieci.gs1.pl/api/products/";
     final gs1user = 'wojciech.wkk@gmail.com';
-    final gs1pass =
-        '85d72d46c327fc0c5d9410860508800f8833b9d009832eb0b51f219387305704';
+    final gs1pass = '85d72d46c327fc0c5d9410860508800f8833b9d009832eb0b51f219387305704';
     final basicAuth = 'Basic ' + base64Encode(utf8.encode('$gs1user:$gs1pass'));
 
     Response response = await get("$gs1uri$eanCode?aggregation=SOCIAL",
-        headers: <String, String>{
-          'authorization': basicAuth,
-          'format': 'json'
-        });
+        headers: <String, String>{'authorization': basicAuth, 'format': 'json'});
 
     final responseJson = json.decode(response.body);
 
@@ -341,9 +360,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       productFromGs1.puid = Uuid().v1();
       productFromGs1.name = _getSomeProdNameFromResponse(responseJson);
       productFromGs1.eanCode = eanCode;
-      productFromGs1.brand = responseJson["Brand"] != null
-          ? responseJson["Brand"]
-          : responseJson["BrandOwner"];
+      productFromGs1.brand = responseJson["Brand"] != null ? responseJson["Brand"] : responseJson["BrandOwner"];
       productFromGs1.owner = responseJson["BrandOwner"];
       productFromGs1.description = responseJson["Description"];
       var prodPicFromDB = responseJson["ProductImage"] != null
@@ -375,16 +392,6 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                 : null;
   }
 
-  void _fetchProductData(String eanCode) {}
-
-  void _dateChanged(DateTime picked) {
-    if (picked != null && picked != selectedDate)
-      setState(() {
-        selectedDate = picked;
-      });
-    return null;
-  }
-
 //---------------------------------- /GS1 DB -----------------------------------
 
   showProduct() {
@@ -392,8 +399,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       print("create product\n${product.name}");
       var productInfoFromDB = "Product info:\n ";
       if (product.owner != null) productInfoFromDB += product.owner;
-      if (product.owner != null || product.name != null)
-        productInfoFromDB += "\n - product: \n";
+      if (product.owner != null || product.name != null) productInfoFromDB += "\n - product: \n";
       if (product.brand != null) productInfoFromDB += "${product.brand}";
       if (product.name != null) productInfoFromDB += "  ${product.name}";
       //    if (product.own != null)
