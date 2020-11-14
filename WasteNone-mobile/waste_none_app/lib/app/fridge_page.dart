@@ -511,7 +511,7 @@ class FridgePageState extends State<FridgePage> {
     DateTime nowDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     //print('setColor: $notifyDate vs. $date: $itemDate');
     return nowDate.compareTo(itemDate) > 0
-        ? Colors.lightGreen
+        ? Colors.lightGreen[300]
         : nowDate == itemDate
             ? Colors.red[300]
             : _notifyDate.compareTo(itemDate) <= 0
@@ -645,6 +645,7 @@ class FridgePageState extends State<FridgePage> {
     Product product = await db.getProductByPUID(toBeDeletedFridgeItem.product_puid);
     FlutterNotification().removeNotification(product, toBeDeletedFridgeItem);
     await db.deleteEncryptedFridgeItem(toBeDeletedFridgeItem.fridge_no, toBeDeletedFridgeItem.dbKey);
+    FlutterNotification().clearNotifications();
     _refreshCurrentFridge();
   }
 
@@ -749,6 +750,7 @@ class FridgePageState extends State<FridgePage> {
                   auth: auth,
                   db: db,
                   fridge: currentFridge,
+                  fridgeContent: usersCurrentFridgeItems,
                   user: user,
                 ))).whenComplete(() => {_fetchUserFridgeData()});
   }

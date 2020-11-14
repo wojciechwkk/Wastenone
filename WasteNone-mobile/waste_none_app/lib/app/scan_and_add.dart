@@ -25,12 +25,14 @@ class ScanAndAdd extends StatefulWidget with ProductQtyValidator {
     @required this.auth,
     @required this.db,
     @required this.fridge,
+    @required this.fridgeContent,
     @required this.user,
   });
 
   final AuthBase auth;
   final WNFirebaseDB db;
   final Fridge fridge;
+  final List<FridgeItem> fridgeContent;
   final WasteNoneUser user;
 
   @override
@@ -38,6 +40,7 @@ class ScanAndAdd extends StatefulWidget with ProductQtyValidator {
         auth: this.auth,
         db: this.db,
         fridge: this.fridge,
+        fridgeContent: this.fridgeContent,
         user: this.user,
       );
 }
@@ -47,6 +50,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       {@required this.auth,
       @required this.db,
       @required this.fridge,
+      @required this.fridgeContent,
       @required this.user,
       @required this.notificationsPlugin});
 
@@ -56,7 +60,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   final FlutterLocalNotificationsPlugin notificationsPlugin;
 
   final Fridge fridge;
-
+  final List<FridgeItem> fridgeContent;
   Product product;
 
 //  String usersFridgeNo = "1"; //default to be extended;
@@ -245,18 +249,20 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
         FridgeItem fridgeItem = await _prepareFridgeItem(qty);
         // todo remove
-        WasteNoneUser wasteNoneUser = await auth.currentUser();
+        WasteNoneUser wasteNoneUser = auth.currentUser();
         //todo remove
         if (fridgeItem != null && !fridgeItem.isEmpty()) {
-          String encryptionPassword = await readEncryptionPassword(wasteNoneUser.uid);
-          String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
-          //db.addToFridge(fridgeItem, wasteNoneUser.uid);
-          db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_no);
-
-          print("item added");
-          Product product = await db.getProductByPUID(fridgeItem.product_puid);
-          // FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
-          FlutterNotification().addExpiryNotification(user, product, fridgeItem);
+          FridgeItem existingSimilarItem = _getCurrentFridgesSimilarItem(fridgeContent, fridgeItem);
+          if (existingSimilarItem != null) {
+            await _updateExistingItem(existingSimilarItem, fridgeItem);
+            print("item updated");
+          } else {
+            await _addNewItem(fridgeItem);
+            print("item added");
+            Product product = await db.getProductByPUID(fridgeItem.product_puid);
+            FlutterNotification().addExpiryNotification(auth.currentUser(), product, fridgeItem);
+          }
+          FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
         }
         setState(() {
           productInfo = "";
@@ -270,6 +276,46 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     }
   }
 
+  Future<void> _updateExistingItem(FridgeItem existingSimilarItem, FridgeItem fridgeItem) async {
+    fridgeContent.remove(existingSimilarItem);
+    existingSimilarItem.qty += fridgeItem.qty;
+    String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
+    String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
+    db.updateEncryptedFridgeItem(existingSimilarItem.fridge_no, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
+    fridgeContent.add(existingSimilarItem);
+    // setState() {
+    // fridgeContent.add(existingSimilarItem);
+
+    // for (FridgeItem existingInNewFridgeItem in newFridgeContent) {
+    //   if (existingInNewFridgeItem.product_puid == fridgeItem.product_puid) {
+    //     if (existingInNewFridgeItem.validDate == fridgeItem.validDate) {
+    //       existingInNewFridgeItem.qty += fridgeItem.qty;
+    //     }
+    //   }
+    // }
+    // }
+  }
+
+  Future<void> _addNewItem(FridgeItem fridgeItem) async {
+    //db.addToFridge(fridgeItem, wasteNoneUser.uid);
+    String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
+    String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
+    String dbKey = await db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_no);
+    fridgeItem.dbKey = dbKey;
+    fridgeContent.add(fridgeItem);
+  }
+
+  FridgeItem _getCurrentFridgesSimilarItem(List<FridgeItem> fridgeItemList, FridgeItem fridgeItem) {
+    for (FridgeItem existingFridgeItem in fridgeItemList) {
+      if (existingFridgeItem.product_puid == fridgeItem.product_puid) {
+        if (existingFridgeItem.validDate == fridgeItem.validDate) {
+          return existingFridgeItem;
+        }
+      }
+    }
+    return null;
+  }
+
   Future<FridgeItem> _prepareFridgeItem(String qty) async {
     FridgeItem fridgeItem = FridgeItem();
     WasteNoneUser wasteNoneUser = await auth.currentUser();
@@ -280,7 +326,6 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     fridgeItem.comment = "comment 1";
     return fridgeItem;
   }
-
 //---------------------------------- /adding item ------------------------------
 //------------------------------ expiry notification  --------------------------
 
@@ -300,8 +345,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   void _scanAction() async {
     // String eanCode = await _scanBarCode();
     // var eanCode = '7630040403290';
-//     var eanCode = '5054563003232';
-    var eanCode = '5900197022548';
+    var eanCode = '5054563003232';
+    // var eanCode = '5900197022548';
 
     _loadingProductData = true;
 

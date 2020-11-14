@@ -58,7 +58,7 @@ class FlutterNotification implements NotificationBase {
 
     String fridgeName = fridge.displayName != null ? fridge.displayName : fridge.fridgeNo.toString();
     await flutterLocalNotificationsPlugin.show(
-        0, 'Added new product to your fridge: $fridgeName', product.name, platformChannelSpecifics,
+        0, 'Added new product to your fridge "$fridgeName"', product.name, platformChannelSpecifics,
         payload: fridgeItem.fuid);
   }
 
@@ -122,7 +122,7 @@ ${product.name}''';
       String productsName, DateTime validDate, tz.TZDateTime notificationTime, String payload) async {
     print('scheduled notification: $productsName expires on $validDate, notification will show: $notificationTime');
     String title = int.parse(payload) > 1 ? 'Items' : 'Item';
-    title += ' about to get expired on ${validDate.year}-${validDate.month}-${validDate.day}';
+    title += ' about to expire ${validDate.year}-${validDate.month}-${validDate.day}';
     await flutterLocalNotificationsPlugin.zonedSchedule(
       _presentDateAsInt(validDate),
       title,
