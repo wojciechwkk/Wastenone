@@ -15,11 +15,10 @@ String encryptAESCryptoJS(String plainText, String passphrase) {
     final key = encrypt.Key(keyndIV.item1);
     final iv = encrypt.IV(keyndIV.item2);
 
-    final encrypter = encrypt.Encrypter(
-        encrypt.AES(key, mode: encrypt.AESMode.cbc, padding: "PKCS7"));
+    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc, padding: "PKCS7"));
     final encrypted = encrypter.encrypt(plainText, iv: iv);
-    Uint8List encryptedBytesWithSalt = Uint8List.fromList(
-        createUint8ListFromString("Salted__") + salt + encrypted.bytes);
+    Uint8List encryptedBytesWithSalt =
+        Uint8List.fromList(createUint8ListFromString("Salted__") + salt + encrypted.bytes);
     return base64.encode(encryptedBytesWithSalt);
   } catch (error) {
     throw error;
@@ -32,17 +31,14 @@ String decryptAESCryptoJS(String encrypted, String passphrase) {
     if (passphrase == null) print('passphrase is null: $passphrase');
     Uint8List encryptedBytesWithSalt = base64.decode(encrypted);
 
-    Uint8List encryptedBytes =
-        encryptedBytesWithSalt.sublist(16, encryptedBytesWithSalt.length);
+    Uint8List encryptedBytes = encryptedBytesWithSalt.sublist(16, encryptedBytesWithSalt.length);
     final salt = encryptedBytesWithSalt.sublist(8, 16);
     var keyndIV = deriveKeyAndIV(passphrase, salt);
     final key = encrypt.Key(keyndIV.item1);
     final iv = encrypt.IV(keyndIV.item2);
 
-    final encrypter = encrypt.Encrypter(
-        encrypt.AES(key, mode: encrypt.AESMode.cbc, padding: "PKCS7"));
-    final decrypted =
-        encrypter.decrypt64(base64.encode(encryptedBytes), iv: iv);
+    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc, padding: "PKCS7"));
+    final decrypted = encrypter.decrypt64(base64.encode(encryptedBytes), iv: iv);
     return decrypted;
   } catch (error) {
     throw error;
@@ -91,16 +87,13 @@ Uint8List genRandomWithNonZero(int seedLength) {
   return uint8list;
 }
 
-List<FridgeItem> decryptFridgeList(
-    Map<String, String> encryptedFridgeItems, String encryptionPassword) {
+List<FridgeItem> decryptFridgeList(Map<String, String> encryptedFridgeItems, String encryptionPassword) {
   List<FridgeItem> decryptedFridgeList = List<FridgeItem>();
   for (String encryptedItemKey in encryptedFridgeItems.keys) {
-    print('about to decrypt item, gotem ${encryptedFridgeItems.keys.length}');
-    String decryptedFridgeItem = decryptAESCryptoJS(
-        encryptedFridgeItems[encryptedItemKey], encryptionPassword);
+    //print('about to decrypt item, gotem ${encryptedFridgeItems.keys.length}');
+    String decryptedFridgeItem = decryptAESCryptoJS(encryptedFridgeItems[encryptedItemKey], encryptionPassword);
 
-    decryptedFridgeList.add(
-        FridgeItem.fromMap(encryptedItemKey, jsonDecode(decryptedFridgeItem)));
+    decryptedFridgeList.add(FridgeItem.fromMap(encryptedItemKey, jsonDecode(decryptedFridgeItem)));
   }
   return decryptedFridgeList;
 }

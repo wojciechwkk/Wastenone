@@ -62,7 +62,12 @@ class WNFirebaseDB implements DBBase {
     }
   }
 
-  Future<String> getUserData(String uid) async {
+  /*
+   returns:
+   - dbKey
+   - userData encrypted with user pass phrase
+   */
+  Future<Map<dynamic, dynamic>> getUserData(String uid) async {
     print('fetch user $uid');
     DataSnapshot snapshot = await _firebaseDB.reference().child("user").orderByChild('uid').equalTo(uid).once();
 
@@ -70,13 +75,8 @@ class WNFirebaseDB implements DBBase {
       var usersMap = Map<String, dynamic>.from(snapshot.value);
       String dbKey = usersMap.keys.elementAt(0);
       Map<dynamic, dynamic> values = usersMap.values.elementAt(0);
-      String uid = values["uid"];
-      return values["userData"];
-      // Map<dynamic, dynamic> userData = values["userData"];
-      // print('data: ${uid}, $userData');
-      // WasteNoneUser fullUser = WasteNoneUser.fromMap(dbKey, userData);
-      // return fullUser;
-
+      values["dbKey"] = dbKey;
+      return values;
     }
     return null;
   }
@@ -116,7 +116,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<Product> getProductByEanCode(String eanCode) async {
-    print("get product by EAN: $eanCode");
+    // print("get product by EAN: $eanCode");
     DataSnapshot snapshot =
         await _firebaseDB.reference().child("product").orderByChild('eanCode').equalTo(eanCode).once();
     if (snapshot != null && snapshot.value != null) {
@@ -127,7 +127,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<Product> getProductByPUID(String puid) async {
-    print("get product by PUID: ${puid}");
+    // print("get product by PUID: ${puid}");
     DataSnapshot snapshot = await _firebaseDB.reference().child("product").orderByChild('puid').equalTo(puid).once();
     if (snapshot != null && snapshot.value != null) {
       var productMap = Map<String, dynamic>.from(snapshot.value);
@@ -174,7 +174,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<Fridge> getFridge(String fridgeID) async {
-    print("get fridge: $fridgeID");
+    // print("get fridge: $fridgeID");
     DataSnapshot snapshot = await _firebaseDB.reference().child("fridge/$fridgeID").once();
     if (snapshot != null && snapshot.value != null) {
       var fridgeMap = Map<String, dynamic>.from(snapshot.value);

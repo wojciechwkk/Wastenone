@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
@@ -84,13 +83,14 @@ class FridgePageState extends State<FridgePage> {
     print(welcomeString);
     //print('fetch user data from db for: ${fetchedUser.toJson()}');
     // WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
-    String encryptedUserData = await db.getUserData(fetchedUser.uid);
+    Map<dynamic, dynamic> userFromDb = await db.getUserData(fetchedUser.uid);
+    String encryptedUserData = userFromDb["userData"];
+    String dbKey = userFromDb["dbKey"];
     String encryptionPassword = await readEncryptionPassword(fetchedUser.uid);
     //print('about to decrypt user data for ${fetchedUser.displayName}');
-    String decryptedFridgeItem = decryptAESCryptoJS(encryptedUserData, encryptionPassword);
-
-    WasteNoneUser userFromDB = WasteNoneUser.fromMap(fetchedUser.dbRef, jsonDecode(decryptedFridgeItem));
-    //print('full fetch ${userFromDB?.toJson()}');
+    String decryptedUserData = decryptAESCryptoJS(encryptedUserData, encryptionPassword);
+    WasteNoneUser userFromDB = WasteNoneUser.fromMap(dbKey, jsonDecode(decryptedUserData));
+    print('full fetched user ${userFromDB?.toJson()}');
 
     Fridge fetchedFridge = await db.getFridge("$usersUID-1");
     //print(fetchedFridge?.toJson());
@@ -127,9 +127,9 @@ class FridgePageState extends State<FridgePage> {
       if (fetchedFridgeItems == null) {
         print("your fridge is empty");
       } else {
-        print("recognized fridge: ${currentFridge?.fridgeID}");
+        //print("recognized fridge: ${currentFridge?.fridgeID}");
 
-        print("found ${fetchedFridgeItems?.length} items in the fridge");
+        print("theres ${fetchedFridgeItems?.length} items in this fridge");
         if (fetchedFridgeItems?.iterator != null) {
           for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
             Product product = await _getProductsDetails(fetchedFridgeItem?.product_puid);
@@ -327,7 +327,9 @@ class FridgePageState extends State<FridgePage> {
   }
 
   _showNextFridge() async {
-    if (user?.getFridgeIDs()?.length > 1) {
+    // print('ilosc lodowek: ${user.getFridgeIDs()?.length}, oraz: ${user.fridgesAdded}');
+    // print(user.toJson());
+    if (user?.fridgesAdded > 1) {
 //      print('currentFridge.fridgeID: ${currentFridge.fridgeID}');
       int currentFridgeListIndex = user?.getFridgeIDs()?.indexOf(currentFridge.fridgeID);
       var newFridgeNo = (currentFridgeListIndex + 1) % user?.getFridgeIDs()?.length;
@@ -480,13 +482,13 @@ class FridgePageState extends State<FridgePage> {
           caption: 'Change date',
           color: Colors.blue,
           icon: Icons.date_range,
-          onTap: () => _showChangeDateDialog(context, index), //_moveToAnotherFridgeSomeNumber
+          onTap: () => _showChangeDateDialog(context, index),
         ),
         IconSlideAction(
           caption: 'Change qty',
           color: Colors.indigo,
           icon: Icons.content_cut,
-          onTap: () => _showQtyDialog(context, index), //Navigator.of(context).pop('Share'),
+          onTap: () => _showQtyDialog(context, index),
         ),
       ],
       secondaryActions: <Widget>[
@@ -494,7 +496,7 @@ class FridgePageState extends State<FridgePage> {
           caption: 'Move',
           color: Colors.green,
           icon: Icons.call_split,
-          onTap: () => _showMoveToAnotherFridgePopup(index, context), //_moveToAnotherFridgeSomeNumber
+          onTap: () => _showMoveToAnotherFridgePopup(index, context),
         ),
         IconSlideAction(
           caption: 'Delete',
@@ -662,21 +664,26 @@ class FridgePageState extends State<FridgePage> {
     _fridgeIDToMoveItemToController.clear();
     _fridgeIDToMoveItemToChanged = false;
     List<Fridge> usersFridges = await db.getUsersFridges(user);
-//    usersFridges.map((e) => print(e.toJson()));
+    print('got ${usersFridges.length}');
+    int i = 1;
+    for (Fridge f in usersFridges) {
+      print('${i++} ${f.toJson()}');
+    }
+    usersFridges.map((e) => print(e.toJson()));
     await showDialog<String>(
         context: context,
         builder: (BuildContext context) {
 //          if (user?.getFridgeIDs()?.length > 1) {
           return AlertDialog(
             content: Container(
-              width: MediaQuery.of(context).size.width * 0.5,
+              width: MediaQuery.of(context).size.width * 0.6,
               height: user.getFridgeIDs().length * 55.0,
               child: ListView.builder(
                   itemCount: usersFridges.length,
                   itemBuilder: (BuildContext context, int index) {
                     if (usersFridges[index].fridgeID != currentFridge.fridgeID) {
                       var text = usersFridges[index].displayName != null
-                          ? 'fridge ${usersFridges[index].fridgeNo}: ${usersFridges[index].displayName}'
+                          ? '${usersFridges[index].displayName}'
                           : 'fridge ${usersFridges[index].fridgeNo}';
                       return GestureDetector(
                         child: Container(

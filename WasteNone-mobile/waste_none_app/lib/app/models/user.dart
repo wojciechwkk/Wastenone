@@ -17,18 +17,14 @@ class WasteNoneUser {
       : dbRef = snapshot.key,
         uid = snapshot.value["uid"],
         displayName = snapshot.value["displayName"],
-        _fridgeIDs = snapshot.value["fridgeIDs"] != null
-            ? snapshot.value["fridgeIDs"]
-            : List<dynamic>(),
+        _fridgeIDs = snapshot.value["fridgeIDs"] != null ? snapshot.value["fridgeIDs"] : List<dynamic>(),
         fridgesAdded = snapshot.value["fridgesAdded"];
 
   WasteNoneUser.fromMap(String key, LinkedHashMap<dynamic, dynamic> valueMap)
-      : uid = valueMap["uid"],
-        dbRef = valueMap["dbRef"],
+      : dbRef = key,
+        uid = valueMap["uid"],
         displayName = valueMap["displayName"],
-        _fridgeIDs = valueMap["fridgeIDs"] != null
-            ? valueMap["fridgeIDs"]
-            : List<dynamic>(),
+        _fridgeIDs = valueMap["fridgeIDs"] != null ? valueMap["fridgeIDs"] : List<dynamic>(),
         fridgesAdded = valueMap["fridgesAdded"];
 
   Map<String, dynamic> get map {
