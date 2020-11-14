@@ -350,7 +350,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
     _loadingProductData = true;
 
-    print(eanCode);
+    //print(eanCode);
     _productFetched = await _fetchFromWasteNoneDB(eanCode);
     print("product found in WasteNone database: $_productFetched");
     if (!_productFetched) {

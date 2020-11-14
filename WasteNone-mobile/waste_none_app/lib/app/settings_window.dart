@@ -86,82 +86,84 @@ class _SettingsWindowState extends State<SettingsWindow> {
         if (snapshot.connectionState == ConnectionState.done) {
           return Scaffold(
               appBar: AppBar(title: Text('Settings'), actions: <Widget>[]),
-              body: Center(
-                child: Column(
-                  children: <Widget>[
-                    ExpandableSettingsTile(
-                      title: 'Expiry notifications',
-                      children: [
-                        SliderSettingsTile(
-                          title: 'notify days before:',
-                          settingKey: this.EXPIRE_NOTIFY_DAYS_KEY,
-                          defaultValue: 2,
-                          min: 1,
-                          max: 9,
-                          step: 1,
-                          leading: Icon(Icons.calendar_today_outlined),
-                          onChange: (value) {
-                            // debugPrint('expiry-notify-days: $value');
-                            setState(() {
-                              _notifyDaysBefore = value;
-                            });
-                          },
-                          subtitle: '${_notifyDaysBefore.toInt()} days',
-                        ),
-                        Visibility(
-                          visible: !_is24hrsFormat,
-                          child: SwitchSettingsTile(
-                            settingKey: this.AM_PM_KEY,
-                            title: 'AM / PM',
-                            disabledLabel: 'am',
-                            enabledLabel: 'pm',
-                            presetValue: _ampmForWidget == 'pm',
+              body: SingleChildScrollView(
+                child: Center(
+                  child: Column(
+                    children: <Widget>[
+                      ExpandableSettingsTile(
+                        title: 'Expiry notifications',
+                        children: [
+                          SliderSettingsTile(
+                            title: 'notify days before:',
+                            settingKey: this.EXPIRE_NOTIFY_DAYS_KEY,
+                            defaultValue: 2,
+                            min: 1,
+                            max: 9,
+                            step: 1,
+                            leading: Icon(Icons.calendar_today_outlined),
                             onChange: (value) {
+                              // debugPrint('expiry-notify-days: $value');
                               setState(() {
-                                _ampmForWidget = value == true ? 'pm' : 'am';
+                                _notifyDaysBefore = value;
                               });
                             },
+                            subtitle: '${_notifyDaysBefore.toInt()} days',
                           ),
-                        ),
-                        NotifyTimeSliderSettingsTile(
-                          title: 'notify at:',
-                          settingKey: this.EXPIRE_NOTIFY_HRS_KEY,
-                          defaultValue: 8.0,
-                          min: 0.0,
-                          max: _maxNotifyTimeScale,
-                          step: 1,
-                          leading: Icon(Icons.access_time_sharp),
-                          presetValue: _notifyAtForWidget,
-                          onChange: (value) {
-                            setState(() {
-                              _notifyAtForWidget = value;
-                            });
-                          },
-                          subtitle: '${_formatTime(_notifyAtForWidget.toInt())}',
-                        ),
-                      ],
-                    ),
-                    SwitchSettingsTile(
-                      settingKey: this.TIME_FORMAT_KEY,
-                      title: 'Time format',
-                      enabledLabel: '24-hour',
-                      disabledLabel: 'AM/PM',
-                      leading: Icon(Icons.accessibility_new_rounded),
-                      onChange: (value) {
-                        _changeTimeFormat(value);
-                      },
-                    ),
-                    SimpleSettingsTile(
-                      title: 'Clear notifications',
-                      subtitle: '',
-                      onTap: _clearNotifications,
-                    ),
-                    SimpleSettingsTile(
-                      title: 'Print notifications',
-                      subtitle: '',
-                      onTap: _printNotifications,
-                    ),
-                  ],
+                          Visibility(
+                            visible: !_is24hrsFormat,
+                            child: SwitchSettingsTile(
+                              settingKey: this.AM_PM_KEY,
+                              title: 'AM / PM',
+                              disabledLabel: 'am',
+                              enabledLabel: 'pm',
+                              presetValue: _ampmForWidget == 'pm',
+                              onChange: (value) {
+                                setState(() {
+                                  _ampmForWidget = value == true ? 'pm' : 'am';
+                                });
+                              },
+                            ),
+                          ),
+                          NotifyTimeSliderSettingsTile(
+                            title: 'notify at:',
+                            settingKey: this.EXPIRE_NOTIFY_HRS_KEY,
+                            defaultValue: 8.0,
+                            min: 0.0,
+                            max: _maxNotifyTimeScale,
+                            step: 1,
+                            leading: Icon(Icons.access_time_sharp),
+                            presetValue: _notifyAtForWidget,
+                            onChange: (value) {
+                              setState(() {
+                                _notifyAtForWidget = value;
+                              });
+                            },
+                            subtitle: '${_formatTime(_notifyAtForWidget.toInt())}',
+                          ),
+                        ],
+                      ),
+                      SwitchSettingsTile(
+                        settingKey: this.TIME_FORMAT_KEY,
+                        title: 'Time format',
+                        enabledLabel: '24-hour',
+                        disabledLabel: 'AM/PM',
+                        leading: Icon(Icons.accessibility_new_rounded),
+                        onChange: (value) {
+                          _changeTimeFormat(value);
+                        },
+                      ),
+                      SimpleSettingsTile(
+                        title: 'Clear notifications',
+                        subtitle: '',
+                        onTap: _clearNotifications,
+                      ),
+                      SimpleSettingsTile(
+                        title: 'Print notifications',
+                        subtitle: '',
+                        onTap: _printNotifications,
+                      ),
+                    ],
+                  ),
                 ),
               ));
         } else {

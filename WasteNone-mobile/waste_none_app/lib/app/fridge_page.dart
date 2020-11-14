@@ -82,26 +82,26 @@ class FridgePageState extends State<FridgePage> {
     String displayName = fetchedUser.displayName;
     String welcomeString = 'Hi, $displayName';
     print(welcomeString);
-    print('fetch user data from db for: ${fetchedUser.toJson()}');
+    //print('fetch user data from db for: ${fetchedUser.toJson()}');
     // WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
     String encryptedUserData = await db.getUserData(fetchedUser.uid);
     String encryptionPassword = await readEncryptionPassword(fetchedUser.uid);
-    print('about to decrypt user data for ${fetchedUser.displayName}');
+    //print('about to decrypt user data for ${fetchedUser.displayName}');
     String decryptedFridgeItem = decryptAESCryptoJS(encryptedUserData, encryptionPassword);
 
     WasteNoneUser userFromDB = WasteNoneUser.fromMap(fetchedUser.dbRef, jsonDecode(decryptedFridgeItem));
-    print('full fetch ${userFromDB?.toJson()}');
+    //print('full fetch ${userFromDB?.toJson()}');
 
     Fridge fetchedFridge = await db.getFridge("$usersUID-1");
-    print(fetchedFridge?.toJson());
+    //print(fetchedFridge?.toJson());
 
-    setState(() {
-      if (mounted) {
+    if (mounted) {
+      setState(() {
         user = userFromDB;
         welcomeText = welcomeString;
         currentFridge = fetchedFridge;
-      }
-    });
+      });
+    }
 
 //    }
   }
@@ -138,16 +138,16 @@ class FridgePageState extends State<FridgePage> {
         }
       }
     }
-    setState(() {
-      if (mounted) {
+    if (mounted) {
+      setState(() {
         fetchedFridgeItems.sort();
         usersCurrentFridgeItems = fetchedFridgeItems;
         fridgeItemCount = usersCurrentFridgeItems?.length;
         usersCurrentProducts = products;
         _loadingUserData = false;
         _notifyDate = _setNotifyDate();
-      }
-    });
+      });
+    }
   }
 
   //---------------------------- /initial load data ----------------------------
@@ -718,7 +718,7 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _moveItemToAnotherFridge(int index, String fridgeID) async {
 //    if (currentFridge.fridgeID != fridgeID) {
-    print('move $index: ${usersCurrentFridgeItems[index].toJson()}');
+    print('move to another fridge $index: ${usersCurrentFridgeItems[index].toJson()}');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
     // await db.deleteFridgeItem(fridgeItem);
     await db.deleteEncryptedFridgeItem(fridgeItem.fridge_no, fridgeItem.dbKey);

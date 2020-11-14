@@ -38,7 +38,7 @@ class FlutterNotification implements NotificationBase {
 
   Future selectNotification(String payload) async {
     if (payload != null) {
-      debugPrint('notification payload: $payload');
+      //debugPrint('notification payload: $payload');
     }
     // await Navigator.push(
     //   context,
@@ -70,9 +70,10 @@ class FlutterNotification implements NotificationBase {
     int notifDayOfTheMonth = expiryDate.day - _notifyDaysBefore.toInt();
 
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    // tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month,
-    //     notifDayOfTheMonth, _notifyAtForWidget.toInt());
-    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, now.hour, now.minute + 1);
+    tz.TZDateTime scheduledDate =
+        tz.TZDateTime(tz.local, now.year, now.month, notifDayOfTheMonth, _notifyAtForWidget.toInt());
+    // debug +1 minute:
+    //tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, now.hour, now.minute + 1);
     List<PendingNotificationRequest> existingNotifications =
         await flutterLocalNotificationsPlugin.pendingNotificationRequests();
 
