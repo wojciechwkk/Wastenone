@@ -11,9 +11,10 @@ class Product {
   String owner;
   String picLink =
       "https://image.shutterstock.com/z/stock-vector-avocado-green-flat-icon-on-white-background-434253583.jpg";
-  String description;
+  String ingredients;
   String eanCode;
   String type;
+  String size;
 
   Product.fromSnapshot(DataSnapshot snapshot)
       : puid = snapshot.value["puid"],
@@ -21,9 +22,10 @@ class Product {
         brand = snapshot.value["brand"],
         owner = snapshot.value["owner"],
         picLink = snapshot.value["picLink"],
-        description = snapshot.value["description"],
+        ingredients = snapshot.value["ingredients"],
         eanCode = snapshot.value["eanCode"],
-        type = snapshot.value["type"];
+        type = snapshot.value["type"],
+        size = snapshot.value["size"];
 
   Product.fromMap(LinkedHashMap<dynamic, dynamic> valueMap)
       : puid = valueMap["puid"],
@@ -31,9 +33,10 @@ class Product {
         brand = valueMap["brand"],
         owner = valueMap["owner"],
         picLink = valueMap["picLink"],
-        description = valueMap["description"],
+        ingredients = valueMap["ingredients"],
         eanCode = valueMap["eanCode"],
-        type = valueMap["type"];
+        type = valueMap["type"],
+        size = valueMap["size"];
 
   Map<String, dynamic> get map {
     return {
@@ -42,9 +45,10 @@ class Product {
       "brand": brand,
       "owner": owner,
       "picLink": picLink,
-      "description": description,
+      "ingredients": ingredients,
       "eanCode": eanCode,
       "type": type,
+      "size": size,
     };
   }
 
@@ -55,9 +59,10 @@ class Product {
       "brand": brand,
       "owner": owner,
       "picLink": picLink,
-      "description": description,
+      "ingredients": ingredients,
       "eanCode": eanCode,
       "type": type,
+      "size": size,
     };
   }
 }

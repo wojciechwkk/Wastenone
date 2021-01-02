@@ -524,14 +524,16 @@ class FridgePageState extends State<FridgePage> {
   Future<void> _changeFridgeItemDate(int index) async {
     print('changeFridgeItemDate');
     FridgeItem fridgeItem = usersCurrentFridgeItems[index];
-    fridgeItem.validDate = '${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}';
+    if (selectedDate != null) {
+      fridgeItem.validDate = '${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}';
 
-    // await db.updateFridgeItem(fridgeItem);
-    String usersEncryptionPass = await readEncryptionPassword(user.uid);
+      // await db.updateFridgeItem(fridgeItem);
+      String usersEncryptionPass = await readEncryptionPassword(user.uid);
 
-    String encryptedFridgeItem = fridgeItem.asEncodedString(usersEncryptionPass);
-    await db.updateEncryptedFridgeItem(fridgeItem.fridge_no, fridgeItem.dbKey, encryptedFridgeItem);
-    _refreshCurrentFridge();
+      String encryptedFridgeItem = fridgeItem.asEncodedString(usersEncryptionPass);
+      await db.updateEncryptedFridgeItem(fridgeItem.fridge_no, fridgeItem.dbKey, encryptedFridgeItem);
+      _refreshCurrentFridge();
+    }
   }
 
   DateTime selectedDate;

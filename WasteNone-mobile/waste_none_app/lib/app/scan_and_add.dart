@@ -107,6 +107,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                           padding: const EdgeInsets.only(top: 30, left: 8, right: 8),
                           child: SizedBox(
                             width: MediaQuery.of(context).size.width * 0.30,
+                            height: MediaQuery.of(context).size.width * 0.30,
                             child: ProductImage(picLink: productPic),
                           ),
                         ),
@@ -264,11 +265,12 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           }
           FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
         }
-        setState(() {
-          productInfo = "";
-          productPic = null;
-        });
-
+        if (mounted) {
+          setState(() {
+            productInfo = "";
+            productPic = null;
+          });
+        }
         selectedDate = defaultSelectedDate;
 
         _scanAction();
@@ -283,17 +285,6 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
     db.updateEncryptedFridgeItem(existingSimilarItem.fridge_no, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
     fridgeContent.add(existingSimilarItem);
-    // setState() {
-    // fridgeContent.add(existingSimilarItem);
-
-    // for (FridgeItem existingInNewFridgeItem in newFridgeContent) {
-    //   if (existingInNewFridgeItem.product_puid == fridgeItem.product_puid) {
-    //     if (existingInNewFridgeItem.validDate == fridgeItem.validDate) {
-    //       existingInNewFridgeItem.qty += fridgeItem.qty;
-    //     }
-    //   }
-    // }
-    // }
   }
 
   Future<void> _addNewItem(FridgeItem fridgeItem) async {
@@ -344,9 +335,15 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   void _scanAction() async {
     // String eanCode = await _scanBarCode();
-    // var eanCode = '7630040403290';
-    var eanCode = '5054563003232';
-    // var eanCode = '5900197022548';
+    // var eanCode = '7630040403290'; //martini
+    // var eanCode = '5054563003232'; //sensodyne
+    // var eanCode = '5900197022548'; //jogurt bakoma
+    var eanCode = '5601009310333'; //porto
+    // var eanCode = '5900012005947'; //maslo
+    // var eanCode = '20645229'; //ser
+    // var eanCode = '5900334012685'; //tymbark
+    // var eanCode = '5449000133328'; //coca cola
+    // var eanCode = '5901785301854'; //plusssz
 
     _loadingProductData = true;
 
@@ -354,11 +351,11 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     _productFetched = await _fetchFromWasteNoneDB(eanCode);
     print("product found in WasteNone database: $_productFetched");
     if (!_productFetched) {
-      _productFetched = await _lookUpInGs1DB(eanCode);
-      print("product found in GS1 database: $_productFetched");
+      _productFetched = await _lookUpInExtDB(eanCode);
+      print("product found in external database: $_productFetched");
     }
     if (_productFetched)
-      showProduct();
+      setProductInfo();
     else
       _showNotFoundMsg();
 
@@ -385,53 +382,52 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
 //---------------------------------- GS1 DB ------------------------------------
 
-  Future<bool> _lookUpInGs1DB(String eanCode) async {
-    print("about to fetch product data from GS1 DB");
-    final gs1uri = "https://produktywsieci.gs1.pl/api/products/";
-    final gs1user = 'wojciech.wkk@gmail.com';
-    final gs1pass = '85d72d46c327fc0c5d9410860508800f8833b9d009832eb0b51f219387305704';
-    final basicAuth = 'Basic ' + base64Encode(utf8.encode('$gs1user:$gs1pass'));
+  Future<bool> _lookUpInExtDB(String eanCode) async {
+    print("about to fetch product data from external DB");
+    final uri = "https://world.openfoodfacts.org/api/v0/product/";
+    final uriWithEan = '$uri$eanCode.json';
 
-    Response response = await get("$gs1uri$eanCode?aggregation=SOCIAL",
-        headers: <String, String>{'authorization': basicAuth, 'format': 'json'});
+    Response response = await get('$uriWithEan', headers: <String, String>{'format': 'json'});
 
     final responseJson = json.decode(response.body);
+    final productJson = responseJson["product"];
 
+    print(uriWithEan);
     print(response.statusCode);
-    if (response.statusCode == 200) {
-      //print(response.body);
+    print(response.body);
+    if (response.statusCode == 200 && responseJson["status_verbose"] == 'product found') {
+      print(response.body);
 
       Product productFromGs1 = Product();
       productFromGs1.puid = Uuid().v1();
-      productFromGs1.name = _getSomeProdNameFromResponse(responseJson);
+      productFromGs1.name = _getSomeProdNameFromResponse(productJson);
       productFromGs1.eanCode = eanCode;
-      productFromGs1.brand = responseJson["Brand"] != null ? responseJson["Brand"] : responseJson["BrandOwner"];
-      productFromGs1.owner = responseJson["BrandOwner"];
-      productFromGs1.description = responseJson["Description"];
-      var prodPicFromDB = responseJson["ProductImage"] != null
-          ? responseJson["ProductImage"]
+      productFromGs1.brand = productJson["brands"];
+      productFromGs1.ingredients = productJson["ingredients_text"];
+      var prodPicFromDB = productJson["image_front_url"] != null
+          ? productJson["image_front_url"]
           : "https://image.shutterstock.com/z/stock-vector-avocado-green-flat-icon-on-white-background-434253583.jpg";
       productFromGs1.picLink = prodPicFromDB;
-      productFromGs1.owner = responseJson["BrandOwner"];
+      productFromGs1.size = productJson["quantity"] != null ? productJson["quantity"] : productJson["serving_size"];
       productFromGs1.type = null;
 
-      print("fetched from gs1 product: ${responseJson["ProductName"]}");
+      print("fetched from external db product: ${productJson["product_name"]}");
 
       setState(() {
         product = productFromGs1;
       });
       return true;
     } else {
-      print(responseJson["Message"]);
+      print("Product not found.");
       return false;
     }
   }
 
   String _getSomeProdNameFromResponse(dynamic jsonResponse) {
-    return jsonResponse["ProductName"] != null
-        ? jsonResponse["ProductName"]
-        : jsonResponse["Brand"] != null
-            ? jsonResponse["Brand"]
+    return jsonResponse["product_name"] != null
+        ? jsonResponse["product_name"]
+        : jsonResponse["brands"] != null
+            ? jsonResponse["brands"]
             : jsonResponse["BrandOwner"] != null
                 ? jsonResponse["BrandOwner"]
                 : null;
@@ -439,17 +435,15 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
 //---------------------------------- /GS1 DB -----------------------------------
 
-  showProduct() {
+  setProductInfo() {
     if (product != null) {
       print("create product\n${product.name}");
-      var productInfoFromDB = "Product info:\n ";
-      if (product.owner != null) productInfoFromDB += product.owner;
-      if (product.owner != null || product.name != null) productInfoFromDB += "\n - product: \n";
-      if (product.brand != null) productInfoFromDB += "${product.brand}";
+      var productInfoFromDB = ""; //""Productct info:\n ";
+
+      if (product.brand != null) productInfoFromDB += "${product.brand}\n";
       if (product.name != null) productInfoFromDB += "  ${product.name}";
-      //    if (product.own != null)
-      //      productInfoFromDB +=
-      //      "\n - produced by:\n ${responseJson["Manufacturer"]}";
+      if (product.size != null) productInfoFromDB += " \n  ${product.size}";
+
       setState(() {
         productInfo = productInfoFromDB;
         if (product.picLink != null) productPic = product.picLink;
