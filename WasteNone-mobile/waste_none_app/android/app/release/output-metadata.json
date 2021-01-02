@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.waste_none_app",
+  "applicationId": "com.corecode.waste_none_app",
   "variantName": "processReleaseResources",
   "elements": [
     {
