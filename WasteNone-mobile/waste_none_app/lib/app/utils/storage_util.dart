@@ -4,8 +4,7 @@ import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/settings_util.dart';
 
 Future<String> readEncryptionPassword(String uuid) async {
-  String encryptionPassword =
-      await FlutterSecureStorage().read(key: '$uuid-pass');
+  String encryptionPassword = await FlutterSecureStorage().read(key: '$uuid-pass');
   return encryptionPassword;
 }
 
@@ -14,8 +13,7 @@ Future<String> createEncryptionPassword(String usersUid) async {
   if (existingPassword == null) {
     var uuidFactory = Uuid();
     String encryptionPassword = uuidFactory.v1();
-    FlutterSecureStorage()
-        .write(key: '$usersUid-pass', value: encryptionPassword);
+    FlutterSecureStorage().write(key: '$usersUid-pass', value: encryptionPassword);
     return encryptionPassword;
   }
   return existingPassword;
@@ -26,26 +24,29 @@ initStoreGithubKey() {
 }
 
 initStoreGithubSecret() {
-  FlutterSecureStorage().write(
-      key: "githubSecret", value: "b73ad19b4ce6fe31a81c1ef090806882dce66323");
+  FlutterSecureStorage().write(key: "githubSecret", value: "b73ad19b4ce6fe31a81c1ef090806882dce66323");
 }
 
 initStoreTwitterKey() {
-  FlutterSecureStorage()
-      .write(key: "twitterKey", value: "lqkhcIN7gru1zWBEHfv07JrMw");
+  FlutterSecureStorage().write(key: "twitterKey", value: "lqkhcIN7gru1zWBEHfv07JrMw");
 }
 
 initStoreTwitterSecret() {
-  FlutterSecureStorage().write(
-      key: "twitterSecret",
-      value: "d5DDRkgE7oa10EZpH0kOfkMIl3l972QpP9sQ1N0FgUGifJCKNQ");
+  FlutterSecureStorage().write(key: "twitterSecret", value: "d5DDRkgE7oa10EZpH0kOfkMIl3l972QpP9sQ1N0FgUGifJCKNQ");
+}
+
+const _SYSTEM_OF_UNIT = "systemOfUnit";
+storeUsersUnitSystem(WasteNoneUser user, SystemOfUnits systemOfUnits) {
+  FlutterSecureStorage().write(key: user.uid + _SYSTEM_OF_UNIT, value: systemOfUnits.toString());
+}
+
+Future<String> getUsersStoredUnitSystem(WasteNoneUser user) async {
+  return await FlutterSecureStorage().read(key: user.uid + _SYSTEM_OF_UNIT);
 }
 
 const _TIME_FORMAT_KEY = "timeFormat";
-
 storeUsersTimeFormat(WasteNoneUser user, TimeFormatEnum timeFormatEnum) {
-  FlutterSecureStorage().write(
-      key: user.uid + _TIME_FORMAT_KEY, value: timeFormatEnum.toString());
+  FlutterSecureStorage().write(key: user.uid + _TIME_FORMAT_KEY, value: timeFormatEnum.toString());
 }
 
 Future<String> getUsersStoredTimeFormat(WasteNoneUser user) async {
@@ -53,13 +54,10 @@ Future<String> getUsersStoredTimeFormat(WasteNoneUser user) async {
 }
 
 const _NOTIFICATION_TIME_KEY = "notificationTime";
-
 storeUsersPushNotificationTime(WasteNoneUser user, String hour) {
-  FlutterSecureStorage()
-      .write(key: user.uid + _NOTIFICATION_TIME_KEY, value: hour);
+  FlutterSecureStorage().write(key: user.uid + _NOTIFICATION_TIME_KEY, value: hour);
 }
 
 Future<String> getUsersPushNotificationTime(WasteNoneUser user) async {
-  return await FlutterSecureStorage()
-      .read(key: user.uid + _NOTIFICATION_TIME_KEY);
+  return await FlutterSecureStorage().read(key: user.uid + _NOTIFICATION_TIME_KEY);
 }

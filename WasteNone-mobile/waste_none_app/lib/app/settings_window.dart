@@ -32,15 +32,18 @@ class _SettingsWindowState extends State<SettingsWindow> {
   final AsyncMemoizer _memoizer = AsyncMemoizer();
 
   String TIME_FORMAT_KEY;
-  String AM_PM_KEY;
+  String IS_12H_KEY;
   String EXPIRE_NOTIFY_DAYS_KEY;
   String EXPIRE_NOTIFY_HRS_KEY;
+  String METRIC_SYSTEM_KEY;
 
   bool _is24hrsFormat;
   String _ampmForWidget;
   double _notifyDaysBefore;
   double _notifyAtForWidget;
   double _maxNotifyTimeScale;
+  bool _isSystemMetric;
+  String _metricSystem;
 
   _setInitTimeFormat() {
     return this._memoizer.runOnce(() async {
@@ -50,16 +53,19 @@ class _SettingsWindowState extends State<SettingsWindow> {
       _maxNotifyTimeScale = _is24hrsFormat ? 23.0 : 11.0;
       _notifyAtForWidget = Settings.getValue(this.EXPIRE_NOTIFY_HRS_KEY, 8);
       _notifyDaysBefore = Settings.getValue(this.EXPIRE_NOTIFY_DAYS_KEY, 2);
-      _ampmForWidget = Settings.getValue(this.AM_PM_KEY, false) ? 'pm' : 'am';
+      _ampmForWidget = Settings.getValue(this.IS_12H_KEY, false) ? 'pm' : 'am';
+      _isSystemMetric = true; //TODO default based on devices country
+      _metricSystem = Settings.getValue(this.METRIC_SYSTEM_KEY, true) ? 'metric' : 'imperial';
       // Settings.clearCache();
     });
   }
 
   void _setSettingsKeys() {
     TIME_FORMAT_KEY = getSettingsKey(SettingsKeysEnum.TIME_FORMAT, user.uid);
-    AM_PM_KEY = getSettingsKey(SettingsKeysEnum.AM_PM, user.uid);
+    IS_12H_KEY = getSettingsKey(SettingsKeysEnum.AM_PM, user.uid);
     EXPIRE_NOTIFY_DAYS_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_DAYS, user.uid);
     EXPIRE_NOTIFY_HRS_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid);
+    METRIC_SYSTEM_KEY = getSettingsKey(SettingsKeysEnum.UNIT_SYSTEM, user.uid);
   }
 
   _changeTimeFormat(bool is24hrs) {
@@ -78,6 +84,12 @@ class _SettingsWindowState extends State<SettingsWindow> {
     });
   }
 
+  _changeUnitsSystem(bool isSystemMetric) {
+    setState(() {
+      _isSystemMetric = isSystemMetric;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -91,6 +103,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
                   child: Column(
                     children: <Widget>[
                       ExpandableSettingsTile(
+                        subtitle: 'expand for options',
                         title: 'Expiry notifications',
                         children: [
                           SliderSettingsTile(
@@ -112,7 +125,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
                           Visibility(
                             visible: !_is24hrsFormat,
                             child: SwitchSettingsTile(
-                              settingKey: this.AM_PM_KEY,
+                              settingKey: this.IS_12H_KEY,
                               title: 'AM / PM',
                               disabledLabel: 'am',
                               enabledLabel: 'pm',
@@ -146,10 +159,20 @@ class _SettingsWindowState extends State<SettingsWindow> {
                         settingKey: this.TIME_FORMAT_KEY,
                         title: 'Time format',
                         enabledLabel: '24-hour',
-                        disabledLabel: 'AM/PM',
+                        disabledLabel: 'AM / PM',
                         leading: Icon(Icons.accessibility_new_rounded),
                         onChange: (value) {
                           _changeTimeFormat(value);
+                        },
+                      ),
+                      SwitchSettingsTile(
+                        settingKey: this.METRIC_SYSTEM_KEY,
+                        title: 'Units',
+                        enabledLabel: 'Metric',
+                        disabledLabel: 'Imperial',
+                        leading: Icon(Icons.architecture),
+                        onChange: (value) {
+                          _changeUnitsSystem(value);
                         },
                       ),
                       SimpleSettingsTile(

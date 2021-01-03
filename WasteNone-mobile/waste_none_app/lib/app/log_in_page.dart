@@ -7,7 +7,7 @@ import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
-import 'log_in_button.dart';
+import 'log_in/log_in_button.dart';
 
 class LogInPage extends StatelessWidget {
   LogInPage({@required this.auth, @required this.db, @required this.userStreamCtrl});
@@ -19,11 +19,6 @@ class LogInPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-//      appBar: AppBar(
-//        title: Text('WasteNone'),
-//        elevation: 100,
-//      ),
-//      resizeToAvoidBottomInset: false,
       body: _buildContent(),
     );
   }

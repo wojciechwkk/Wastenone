@@ -30,4 +30,5 @@ Future<List<FridgeItem>> fetchAndDescryptFridge(WNFirebaseDB db, String fridgeId
       return fetchedFridgeItems;
     }
   }
+  return new List<FridgeItem>();
 }

@@ -512,7 +512,7 @@ class FridgePageState extends State<FridgePage> {
                   },
               dense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 4.0),
-              leading: ProductImage(picLink: productLink),
+              leading: ProductImage(newProduct: false, picLink: productLink, picFile: null),
               //title: Text('Tile n°$index'),
               title: Text(productName),
               subtitle: Text(description),

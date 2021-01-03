@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart';
 import 'package:uuid/uuid.dart';
+import 'package:waste_none_app/app/add_product.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
@@ -68,7 +69,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   String welcomeText = "WasteNone";
   String productInfo = "Product info";
-  String productPic;
+  String productPicLink;
 
   bool _loadingProductData = false;
 
@@ -92,7 +93,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       '5900334012685',
       '5449000133328',
       '5901785301854',
-      '5601009310333'
+      // '5601009310333' //porto
     ];
     _scanAction();
   }
@@ -102,12 +103,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     Widget loadingIndicator = _loadingProductData ? LoadingIndicator() : Container();
 
     return Scaffold(
-      appBar: AppBar(title: Text(welcomeText), actions: <Widget>[
-//        FlatButton(
-//          child: Text('Logout', style: TextStyle(fontSize: 18)),
-//          onPressed: _logOut,
-//        )
-      ]),
+      appBar: AppBar(title: Text(welcomeText)),
       body: Stack(
         children: <Widget>[
           SingleChildScrollView(
@@ -123,7 +119,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                           child: SizedBox(
                             width: MediaQuery.of(context).size.width * 0.30,
                             height: MediaQuery.of(context).size.width * 0.30,
-                            child: ProductImage(picLink: productPic),
+                            child: ProductImage(newProduct: false, picLink: productPicLink, picFile: null),
                           ),
                         ),
                         Padding(
@@ -254,8 +250,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           return AlertDialog(
             content: new Row(
               children: <Widget>[
-                new Expanded(
-                  child: new TextFormField(
+                Expanded(
+                  child: TextFormField(
                     controller: _qtyTextController,
                     inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                     keyboardType: TextInputType.number,
@@ -316,7 +312,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         if (mounted) {
           setState(() {
             productInfo = "";
-            productPic = null;
+            productPicLink = null;
           });
         }
         selectedDate = defaultSelectedDate;
@@ -467,7 +463,15 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 //------------------------------- ADD NEW PRODUCT --------------------------------
 
   void _addNewProduct() async {
-    print('add new product');
+    print('add new product manually');
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => AddProductPage(
+                  auth: auth,
+                  db: db,
+                  user: user,
+                ))).whenComplete(() => {print('product added..')});
   }
 
 //------------------------------- /ADD NEW PRODUCT -------------------------------
@@ -483,7 +487,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
       setState(() {
         productInfo = productInfoFromDB;
-        if (product.picLink != null) productPic = product.picLink;
+        if (product.picLink != null) productPicLink = product.picLink;
       });
     }
   }

@@ -4,12 +4,8 @@ import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/storage_util.dart';
 
 enum TimeFormatEnum { ampm, a24h }
-enum SettingsKeysEnum {
-  TIME_FORMAT,
-  AM_PM,
-  NOTIFY_EXPIRY_DAYS,
-  NOTIFY_EXPIRY_HRS
-}
+enum SystemOfUnits { metric, imperial }
+enum SettingsKeysEnum { TIME_FORMAT, AM_PM, NOTIFY_EXPIRY_DAYS, NOTIFY_EXPIRY_HRS, UNIT_SYSTEM }
 
 String getSettingsKey(SettingsKeysEnum settingsKeyEnum, String userUid) {
   switch (settingsKeyEnum) {
@@ -25,19 +21,29 @@ String getSettingsKey(SettingsKeysEnum settingsKeyEnum, String userUid) {
     case SettingsKeysEnum.NOTIFY_EXPIRY_HRS:
       return '$userUid-expiry-notify-hours';
       break;
+    case SettingsKeysEnum.UNIT_SYSTEM:
+      return '$userUid-unit-system';
+      break;
     default:
       return '';
   }
 }
 
-Future<bool> isUsersTimeFormat24hs(
-    WasteNoneUser user, BuildContext context) async {
-  String timeFormatStored = await getUsersStoredTimeFormat(user);
-  if (timeFormatStored != null)
-    return timeFormatStored == TimeFormatEnum.a24h.toString();
-  else
-    return MediaQuery.of(context).alwaysUse24HourFormat;
-}
+// Future<bool> isUsersTimeFormat24hs(WasteNoneUser user, BuildContext context) async {
+//   String timeFormatStored = await getUsersStoredTimeFormat(user);
+//   if (timeFormatStored != null)
+//     return timeFormatStored == TimeFormatEnum.a24h.toString();
+//   else
+//     return MediaQuery.of(context).alwaysUse24HourFormat;
+// }
+//
+// Future<bool> isSystemMetric(WasteNoneUser user, BuildContext context) async {
+//   String unitSystemStored = await getUsersStoredUnitSystem(user);
+//   if (unitSystemStored != null)
+//     return unitSystemStored == SystemOfUnits.metric.toString();
+//   else
+//     return null; //MediaQuery.of(context).alwaysUse24HourFormat; TODO!!
+// }
 
 Future<TimeOfDay> getNotificationTime(WasteNoneUser user) async {
   String notificationTime = await getUsersPushNotificationTime(user);

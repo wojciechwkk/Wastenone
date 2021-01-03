@@ -6,7 +6,7 @@ import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
 import 'fridge_page.dart';
-import 'log_in/log_in_page.dart';
+import 'log_in_page.dart';
 import 'models/user.dart';
 
 class LandingSemaphorePage extends StatelessWidget {
