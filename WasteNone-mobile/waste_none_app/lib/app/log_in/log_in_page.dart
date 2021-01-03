@@ -10,8 +10,7 @@ import 'package:waste_none_app/services/firebase_database.dart';
 import 'log_in_button.dart';
 
 class LogInPage extends StatelessWidget {
-  LogInPage(
-      {@required this.auth, @required this.db, @required this.userStreamCtrl});
+  LogInPage({@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
@@ -29,6 +28,7 @@ class LogInPage extends StatelessWidget {
     );
   }
 
+  bool _buttonFirstPressed = true;
   SingleChildScrollView _buildContent() {
     return SingleChildScrollView(
       child: Container(
@@ -50,7 +50,12 @@ class LogInPage extends StatelessWidget {
               text: 'Check it out without authentication',
               textColor: Colors.black,
               color: Colors.grey[200],
-              onPressed: _logInAnonymously,
+              onPressed: () {
+                if (_buttonFirstPressed) {
+                  _buttonFirstPressed = false;
+                  _logInAnonymously();
+                }
+              },
             ),
           ],
         ),
@@ -60,6 +65,7 @@ class LogInPage extends StatelessWidget {
 
   Future<void> _logInAnonymously() async {
     try {
+      print('Logging in as an anon!');
       await _logInAndDBCreateAnon();
     } catch (e) {
       print(e.toString());

@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/utils/fridge_util.dart';
 import 'package:waste_none_app/app/utils/storage_util.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
@@ -75,10 +76,24 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   DateTime defaultSelectedDate = new DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day + 1);
   bool _productFetched = false;
 
+  List<String> exampleEanCodes;
+  int eanItemIndex = 0;
+
   @override
   void initState() {
     super.initState();
     selectedDate = defaultSelectedDate;
+    exampleEanCodes = [
+      '7630040403290',
+      '5054563003232',
+      '5900197022548',
+      '5900012005947',
+      '20645229',
+      '5900334012685',
+      '5449000133328',
+      '5901785301854',
+      '5601009310333'
+    ];
     _scanAction();
   }
 
@@ -145,27 +160,58 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
+      floatingActionButton: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             Visibility(
               visible: _productFetched,
-              child: FloatingActionButton.extended(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FloatingActionButton.extended(
                   onPressed: () => _showQtyDialog(context), //_showQtyDialog(context),
                   label: Text("Add"),
                   icon: Icon(Icons.ac_unit),
-                  heroTag: "addbut"),
+                  heroTag: "addbut",
+                ),
+              ),
             ),
-//            Padding(
-//              padding: const EdgeInsets.all(8.0),
-//              child: FloatingActionButton.extended(
-//                  onPressed: () =>
-//                      {Navigator.pop(context, true)}, //_scanAction,
-//                  label: Text("Back"),
-//                  icon: Icon(Icons.camera),
-//                  heroTag: "scanbut"),
-//            ),
+            Visibility(
+              visible: _productFetched,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FloatingActionButton.extended(
+                  onPressed: () => Navigator.pop(context), //_showQtyDialog(context),
+                  label: Text("Cancel"),
+                  icon: Icon(Icons.cancel_sharp),
+                  heroTag: "cancel",
+                ),
+              ),
+            ),
+            Visibility(
+              visible: !_productFetched,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FloatingActionButton.extended(
+                  onPressed: () => _addNewProduct(), //_showQtyDialog(context),
+                  label: Text("Add Manually"),
+                  icon: Icon(Icons.add),
+                  heroTag: "addProduct",
+                ),
+              ),
+            ),
+            Visibility(
+              visible: !_productFetched,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FloatingActionButton.extended(
+                  onPressed: () => _scanAction(), //_showQtyDialog(context),
+                  label: Text("Scan Another"),
+                  icon: Icon(Icons.camera),
+                  heroTag: "scan",
+                ),
+              ),
+            ),
           ]),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -229,8 +275,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
               new FlatButton(
                   child: const Text('OK'),
                   onPressed: () {
-                    _addItemToFridgeAction(_qtyTextController.text.toString());
-                    Navigator.pop(context);
+                    _addItem();
                   }),
               new FlatButton(
                   child: const Text('Cancel'),
@@ -242,18 +287,21 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         });
   }
 
-  _addItemToFridgeAction(String qty) async {
+  _addItem() async {
+    String qty = _qtyTextController.text.toString();
+    FridgeItem fridgeItem = await _prepareFridgeItem(qty);
+    _addItemToFridgeAction(fridgeItem);
+    Navigator.pop(context);
+  }
+
+  _addItemToFridgeAction(FridgeItem fridgeItem) async {
     if (product != null) {
       if (widget.qtyValidator.isValid(_qtyTextController.text)) {
         bool isInProductsTable = await db?.isInProductsWNDB(product?.eanCode);
         if (!isInProductsTable) db?.addProduct(product);
 
-        FridgeItem fridgeItem = await _prepareFridgeItem(qty);
-        // todo remove
-        WasteNoneUser wasteNoneUser = auth.currentUser();
-        //todo remove
         if (fridgeItem != null && !fridgeItem.isEmpty()) {
-          FridgeItem existingSimilarItem = _getCurrentFridgesSimilarItem(fridgeContent, fridgeItem);
+          FridgeItem existingSimilarItem = getSimilarItemInFridge(fridgeContent, fridgeItem);
           if (existingSimilarItem != null) {
             await _updateExistingItem(existingSimilarItem, fridgeItem);
             print("item updated");
@@ -283,7 +331,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     existingSimilarItem.qty += fridgeItem.qty;
     String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
     String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
-    db.updateEncryptedFridgeItem(existingSimilarItem.fridge_no, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
+    db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
     fridgeContent.add(existingSimilarItem);
   }
 
@@ -291,26 +339,14 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     //db.addToFridge(fridgeItem, wasteNoneUser.uid);
     String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
     String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
-    String dbKey = await db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_no);
+    String dbKey = await db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_id);
     fridgeItem.dbKey = dbKey;
     fridgeContent.add(fridgeItem);
   }
 
-  FridgeItem _getCurrentFridgesSimilarItem(List<FridgeItem> fridgeItemList, FridgeItem fridgeItem) {
-    for (FridgeItem existingFridgeItem in fridgeItemList) {
-      if (existingFridgeItem.product_puid == fridgeItem.product_puid) {
-        if (existingFridgeItem.validDate == fridgeItem.validDate) {
-          return existingFridgeItem;
-        }
-      }
-    }
-    return null;
-  }
-
   Future<FridgeItem> _prepareFridgeItem(String qty) async {
     FridgeItem fridgeItem = FridgeItem();
-    WasteNoneUser wasteNoneUser = await auth.currentUser();
-    fridgeItem.fridge_no = fridge.fridgeID;
+    fridgeItem.fridge_id = fridge.fridgeID;
     fridgeItem.product_puid = product?.puid;
     fridgeItem.qty = num.parse(qty);
     fridgeItem.validDate = "${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}";
@@ -335,15 +371,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   void _scanAction() async {
     // String eanCode = await _scanBarCode();
-    // var eanCode = '7630040403290'; //martini
-    // var eanCode = '5054563003232'; //sensodyne
-    // var eanCode = '5900197022548'; //jogurt bakoma
-    var eanCode = '5601009310333'; //porto
-    // var eanCode = '5900012005947'; //maslo
-    // var eanCode = '20645229'; //ser
-    // var eanCode = '5900334012685'; //tymbark
-    // var eanCode = '5449000133328'; //coca cola
-    // var eanCode = '5901785301854'; //plusssz
+    String eanCode = exampleEanCodes[eanItemIndex];
+    eanItemIndex++;
 
     _loadingProductData = true;
 
@@ -380,7 +409,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
 //---------------------------------- /WN DB ------------------------------------
 
-//---------------------------------- GS1 DB ------------------------------------
+//-------------------------------- PRODUCT DB ----------------------------------
 
   Future<bool> _lookUpInExtDB(String eanCode) async {
     print("about to fetch product data from external DB");
@@ -418,7 +447,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       });
       return true;
     } else {
-      print("Product not found.");
+      print("Product not found :(");
       return false;
     }
   }
@@ -433,7 +462,15 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                 : null;
   }
 
-//---------------------------------- /GS1 DB -----------------------------------
+//-------------------------------- /PRODUCT DB -----------------------------------
+
+//------------------------------- ADD NEW PRODUCT --------------------------------
+
+  void _addNewProduct() async {
+    print('add new product');
+  }
+
+//------------------------------- /ADD NEW PRODUCT -------------------------------
 
   setProductInfo() {
     if (product != null) {
@@ -452,9 +489,9 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   }
 
   _showNotFoundMsg() {
-    print("product not found");
+    print("product not found :(");
     setState(() {
-      productInfo = "Product not found";
+      productInfo = "Product not found :(";
     });
   }
 }

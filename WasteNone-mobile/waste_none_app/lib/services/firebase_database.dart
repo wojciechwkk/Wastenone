@@ -21,9 +21,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future createUser(WasteNoneUser user, String encodedUserData) async {
-    print('create db user: ${user?.toJson()}');
-
-    print("create user in wastenone db: ${user.displayName}");
+    print("db: creating user in wastenone db: ${user.displayName}");
 
     DatabaseReference dbNewUserRef = _firebaseDB
         .reference()
@@ -45,7 +43,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   updateUser(WasteNoneUser user, String encodedUserData) async {
-    print('update user ${user.toJson()}');
+    print('db: updating user ${user.toJson()}');
     if (user.dbRef != null) {
       DatabaseReference dbUserRef = _firebaseDB.reference().child("user").child(user.dbRef);
       await dbUserRef.set({"uid": user.uid, "userData": encodedUserData});
@@ -53,7 +51,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   deleteUser(WasteNoneUser user) async {
-    print('delete user ${user?.toJson()}');
+    print('db: deleting user ${user?.toJson()}');
     if (user != null) {
       user?.getFridgeIDs()?.forEach((fridgeId) => deleteFridge(fridgeId));
       if (user.dbRef != null) {
@@ -68,7 +66,7 @@ class WNFirebaseDB implements DBBase {
    - userData encrypted with user pass phrase
    */
   Future<Map<dynamic, dynamic>> getUserData(String uid) async {
-    print('fetch user $uid');
+    print('db: fetching user $uid');
     DataSnapshot snapshot = await _firebaseDB.reference().child("user").orderByChild('uid').equalTo(uid).once();
 
     if (snapshot != null && snapshot.value != null) {
@@ -82,7 +80,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<List<Fridge>> getUsersFridges(WasteNoneUser user) async {
-    print("get users fridges: ${user.displayName}");
+    print("db: getting users fridges: ${user.displayName}, uid: ${user.uid}");
     DataSnapshot snapshot = await _firebaseDB.reference().child("fridge").orderByKey().startAt(user.uid).once();
 
     if (snapshot != null && snapshot.value != null) {
@@ -105,12 +103,12 @@ class WNFirebaseDB implements DBBase {
 // --------------------------------------- product -----------------------------
 
   void getAllProducts() {
-    print("get all products");
+    print("db: getting all products");
     Query _todoQuery = _firebaseDB.reference().child("products");
   }
 
   Future<bool> isInProductsWNDB(String eanCode) async {
-    print("check if product with EAN: ${eanCode} is in the WNDB");
+    print("db: checking if product with EAN: ${eanCode} is in the WNDB");
     Product product = await getProductByEanCode(eanCode);
     return product != null;
   }
@@ -138,7 +136,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   void addProduct(Product product) {
-    print("add product: ${product.name}");
+    print("db: adding product: ${product.name}");
     _firebaseDB.reference().child("product").push().set(product?.toJson());
   }
 
@@ -152,18 +150,26 @@ class WNFirebaseDB implements DBBase {
 // --------------------------------------- fridge ------------------------------
 
   Future<void> addFridge(Fridge fridge) async {
-    print("add fridge: ${fridge.fridgeID}");
-    await _firebaseDB.reference().child("fridge/${fridge.fridgeID}").push().set(fridge.toJson());
+    print("db: adding fridge: ${fridge.fridgeID}");
+
+    DatabaseReference dbNewFridgeRef = _firebaseDB
+        .reference()
+        .child("fridge/${fridge.fridgeID}") //user/${user.uid}
+        .push();
+
+    fridge.dbKey = dbNewFridgeRef.key;
+    await dbNewFridgeRef.set({"fridgeID": fridge.fridgeID, "fridgeNo": fridge.fridgeNo});
   }
 
   Future<void> updateFridge(Fridge fridge) async {
+    print('db: updating fridge id: ${fridge.fridgeID}, dbkey ${fridge.dbKey}');
     await _firebaseDB.reference().child("fridge/${fridge.fridgeID}/").child(fridge.dbKey).set(fridge.toJson());
   }
 
   @deprecated
   addToFridge(FridgeItem fridgeItem, String uid) async {
-    print("add item to fridge: ${fridgeItem.fridge_no}");
-    _firebaseDB.reference().child("fridge-contents/${fridgeItem.fridge_no}").push().set(fridgeItem.toJson());
+    print("db: adding item to fridge: ${fridgeItem.fridge_id}");
+    _firebaseDB.reference().child("fridge-contents/${fridgeItem.fridge_id}").push().set(fridgeItem.toJson());
   }
 
   Future<String> addToFridgeEncrypted(String encryptedFridgeItem, String fridgeNo) async {
@@ -189,7 +195,7 @@ class WNFirebaseDB implements DBBase {
 
   @deprecated
   Future<List<FridgeItem>> getFridgeContent(String fridgeID, String uid) async {
-    print("get fridge content for: $fridgeID");
+    print("db: getting fridge content for: $fridgeID");
     DataSnapshot snapshot =
         await _firebaseDB.reference().child("fridge-contents/$fridgeID").orderByChild('validDate').once();
     if (snapshot != null && snapshot.value != null) {
@@ -198,7 +204,7 @@ class WNFirebaseDB implements DBBase {
       for (var fridgeItemKey in fridgeItemsMap.keys) {
         fridgeItemsResult.add(FridgeItem.fromMap(fridgeItemKey, fridgeItemsMap[fridgeItemKey]));
       }
-      print('sorting fridhe');
+      print('db: sorting fridge');
       fridgeItemsResult.sort();
       return fridgeItemsResult;
     }
@@ -209,7 +215,7 @@ class WNFirebaseDB implements DBBase {
   updateFridgeItem(FridgeItem fridgeItem) async {
     await _firebaseDB
         .reference()
-        .child("fridge-contents/${fridgeItem.fridge_no}/")
+        .child("fridge-contents/${fridgeItem.fridge_id}/")
         .child(fridgeItem.dbKey)
         .set(fridgeItem.toJson());
   }
@@ -220,9 +226,9 @@ class WNFirebaseDB implements DBBase {
 
   @deprecated
   deleteFridgeItem(FridgeItem fridgeItem) async {
-    print('delete fridge item ${fridgeItem?.toJson()}');
+    print('db: deleting fridge item ${fridgeItem?.toJson()}');
     if (fridgeItem != null) {
-      await _firebaseDB.reference().child("fridge-contents/${fridgeItem.fridge_no}/").child(fridgeItem.dbKey).remove();
+      await _firebaseDB.reference().child("fridge-contents/${fridgeItem.fridge_id}/").child(fridgeItem.dbKey).remove();
     }
   }
 
@@ -231,7 +237,7 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<Map<String, String>> getFridgeEncryptedContent(String fridgeID, String uid) async {
-    print("get encrypted fridge content for: $fridgeID");
+    print("db: getting encrypted fridge content for: $fridgeID");
     DataSnapshot snapshot = await _firebaseDB.reference().child("fridge-contents/$fridgeID").once();
 
     if (snapshot != null && snapshot.value != null) {
@@ -244,22 +250,22 @@ class WNFirebaseDB implements DBBase {
       }
       return fridgeItemsResult;
     }
-    print('get encrypted fridge got null');
+    // print('get encrypted fridge got null');
     return null;
   }
 
   void removeFridge(String fridgeNo) async {
-    print("remove fridge: $fridgeNo");
+    print("db: removing fridge: $fridgeNo");
     _firebaseDB.reference().child("fridge-contents/$fridgeNo").remove();
   }
 
   emptyFridge(String fridgeId) {
-    print('empty fridge $fridgeId');
+    print('db: emptying fridge $fridgeId');
     _firebaseDB.reference().child("fridge-contents/$fridgeId").remove();
   }
 
   deleteFridge(String fridgeId) {
-    print('delete fridge $fridgeId');
+    print('db: deleting fridge $fridgeId');
     emptyFridge(fridgeId);
     _firebaseDB.reference().child("fridge/$fridgeId").remove();
   }

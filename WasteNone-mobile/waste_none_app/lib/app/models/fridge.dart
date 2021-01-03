@@ -48,10 +48,21 @@ class Fridge extends Comparable {
 
   @override
   int compareTo(other) {
-    if (this.fridgeNo < other.fridgeNo) return 1;
-    if (this.fridgeNo > other.fridgeNo)
+    if (this.displayName != null && other.displayName != null)
+      return this.displayName.compareTo(other.displayName);
+    else if (this.displayName != null && other.displayName == null)
       return -1;
+    else if (this.displayName == null && other.displayName != null)
+      return 1;
     else
-      return 0;
+      return this.fridgeNo.compareTo(other.fridgeNo);
   }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) || (other is Fridge && this.fridgeID == other.fridgeID);
+  }
+
+  @override
+  int get hashCode => fridgeID.hashCode;
 }

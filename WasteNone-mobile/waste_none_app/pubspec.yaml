@@ -44,6 +44,7 @@ dependencies:
   flutter_secure_storage: ^3.3.5
   flutter_local_notifications: ^3.0.1+6
   flutter_native_timezone: ^1.0.4
+  fluttertoast: ^7.1.6
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +72,7 @@ flutter:
     - images/google.png
     - images/twitter.png
     - images/wastenone.png
+    - images/wastenone_icon.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

@@ -17,7 +17,7 @@ class SocialLogInButton extends StatelessWidget {
     return SizedBox(
       height: this.height,
       child: FlatButton(
-          color: Colors.white, // backgroud color,
+          color: Colors.white, // background color,
           child: Image.asset(assetPic),
           onPressed: this.onPressed),
     );
