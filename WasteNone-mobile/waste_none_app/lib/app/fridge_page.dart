@@ -869,29 +869,52 @@ class MoveFridgeItemQtySelectionPopup extends StatefulWidget {
 class MoveFridgeItemQtySelectionPopupState extends State<MoveFridgeItemQtySelectionPopup> {
   MoveFridgeItemQtySelectionPopupState({@required this.maxQty}) {
     moveQty = maxQty;
+    moveQtyController.text = maxQty.toString();
   }
 
   final int maxQty;
   int moveQty;
+  TextEditingController moveQtyController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Select quantity'),
+      title: Text('Select quantity to move'),
       content: Container(
         width: MediaQuery.of(context).size.width * 0.8,
-        height: 100,
-        child: Slider(
-          divisions: maxQty - 1,
-          min: 1.0,
-          max: maxQty.toDouble(),
-          value: moveQty.toDouble(),
-          onChanged: (value) {
-            setState(() {
-              moveQty = value.round();
-            });
-          },
-          label: '${moveQty.toString()}',
+        height: 130,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: Container(
+                width: 120,
+                child: TextField(
+                  // decoration: new InputDecoration(labelText: "quantity",),
+                  textAlign: TextAlign.right,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                  controller: moveQtyController, // Onl
+                  onChanged: (value) {
+                    moveQty = int.parse(value);
+                  }, // y numbers can be entered
+                ),
+              ),
+            ),
+            Slider(
+              divisions: maxQty - 1,
+              min: 1.0,
+              max: maxQty.toDouble(),
+              value: moveQty.toDouble(),
+              onChanged: (value) {
+                setState(() {
+                  moveQty = value.round();
+                  moveQtyController.text = moveQty.toString();
+                });
+              },
+              label: '${moveQty.toString()}',
+            ),
+          ],
         ),
       ),
       actions: <Widget>[
