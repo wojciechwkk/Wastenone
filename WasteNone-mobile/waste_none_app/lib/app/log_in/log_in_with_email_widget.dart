@@ -75,7 +75,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
               firebaseUser.addFridgeID(defaultFridgeID);
 
               String encodedUserData = firebaseUser.asEncodedString(encrPassword);
-              await db.createUser(firebaseUser, encodedUserData);
+              await db.createUser(firebaseUser);
               userStreamCtrl.sink.add(firebaseUser);
             }
             _isLoading = false;
@@ -275,7 +275,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
       String defaultFridgeID = await db.createDefaultFridge(user.uid);
       user.addFridgeID(defaultFridgeID);
 
-      await db.createUser(user, user.asEncodedString(encrPass));
+      await db.createUser(user);
     }
     userStreamCtrl.sink.add(user);
   }

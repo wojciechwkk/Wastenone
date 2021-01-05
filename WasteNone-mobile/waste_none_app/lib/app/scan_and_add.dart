@@ -327,7 +327,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     existingSimilarItem.qty += fridgeItem.qty;
     String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
     String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
-    db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
+    // db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
+    db.updateFridgeItem(fridgeItem);
     fridgeContent.add(existingSimilarItem);
   }
 
@@ -335,7 +336,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     //db.addToFridge(fridgeItem, wasteNoneUser.uid);
     String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
     String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
-    String dbKey = await db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_id);
+    // String dbKey = await db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_id);
+    String dbKey = await db.addToFridge(fridgeItem, user.uid);
     fridgeItem.dbKey = dbKey;
     fridgeContent.add(fridgeItem);
   }

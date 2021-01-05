@@ -75,7 +75,7 @@ class LogInPage extends StatelessWidget {
     user.addFridgeID(defaultFridgeID);
 
     String encodedUserData = user.asEncodedString(encryptionPassword);
-    await db.createUser(user, encodedUserData);
+    await db.createUser(user);
 
     userStreamCtrl.sink.add(user);
   }

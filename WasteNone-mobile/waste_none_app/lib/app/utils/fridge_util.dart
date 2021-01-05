@@ -16,19 +16,20 @@ FridgeItem getSimilarItemInFridge(List<FridgeItem> fridgeItemList, FridgeItem fr
   return null;
 }
 
-Future<List<FridgeItem>> fetchAndDescryptFridge(WNFirebaseDB db, String fridgeId, WasteNoneUser user) async {
-  List<FridgeItem> fetchedFridgeItems = new List<FridgeItem>();
-  Map<String, String> fetchedEncryptedFridgeItems = await db?.getFridgeEncryptedContent(fridgeId, user.uid);
-  if (fetchedEncryptedFridgeItems != null) {
-    String encryptionPassword = await readEncryptionPassword(user.uid);
-    fetchedFridgeItems = decryptFridgeList(fetchedEncryptedFridgeItems, encryptionPassword);
-    if (fetchedFridgeItems == null) {
-      // print("your fridge is empty");
-      return new List<FridgeItem>();
-    } else {
-      // print("theres ${fetchedFridgeItems?.length} items in this fridge");
-      return fetchedFridgeItems;
-    }
-  }
-  return new List<FridgeItem>();
-}
+// @deprecated
+// Future<List<FridgeItem>> fetchAndDescryptFridgeContent(WNFirebaseDB db, String fridgeId, WasteNoneUser user) async {
+//   List<FridgeItem> fetchedFridgeItems = new List<FridgeItem>();
+//   Map<String, String> fetchedEncryptedFridgeItems = await db?.getFridgeEncryptedContent(fridgeId, user.uid);
+//   if (fetchedEncryptedFridgeItems != null) {
+//     String encryptionPassword = await readEncryptionPassword(user.uid);
+//     fetchedFridgeItems = decryptFridgeList(fetchedEncryptedFridgeItems, encryptionPassword);
+//     if (fetchedFridgeItems == null) {
+//       // print("your fridge is empty");
+//       return new List<FridgeItem>();
+//     } else {
+//       // print("theres ${fetchedFridgeItems?.length} items in this fridge");
+//       return fetchedFridgeItems;
+//     }
+//   }
+//   return new List<FridgeItem>();
+// }

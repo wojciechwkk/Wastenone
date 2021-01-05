@@ -85,14 +85,15 @@ class FridgePageState extends State<FridgePage> {
     print(welcomeString);
     //print('fetch user data from db for: ${fetchedUser.toJson()}');
     // WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
-    Map<dynamic, dynamic> userFromDb = await db.getUserData(fetchedUser.uid);
-    String encryptedUserData = userFromDb["userData"];
-    String dbKey = userFromDb["dbKey"];
-    String encryptionPassword = await readEncryptionPassword(fetchedUser.uid);
+    WasteNoneUser userFromDB = await db.getUserData(fetchedUser.uid);
+    // String encryptedUserData = userFromDb["userData"];
+    // String dbKey = userFromDb["dbKey"];
+    // String encryptionPassword = await readEncryptionPassword(fetchedUser.uid);
     // print('about to decrypt user data for ${fetchedUser.displayName}');
-    String decryptedUserData = decryptAESCryptoJS(encryptedUserData, encryptionPassword);
-    WasteNoneUser userFromDB = WasteNoneUser.fromMap(dbKey, jsonDecode(decryptedUserData));
+    // String decryptedUserData = decryptAESCryptoJS(encryptedUserData, encryptionPassword);
+    // WasteNoneUser userFromDB = WasteNoneUser.fromMap(dbKey, jsonDecode(decryptedUserData));
     print('full fetched user ${userFromDB?.toJson()}');
+
     Fridge fetchedFridge = await db.getFridge("$usersUID-1");
     //print(fetchedFridge?.toJson());
 
@@ -121,7 +122,8 @@ class FridgePageState extends State<FridgePage> {
   Future<void> _fetchUserFridgeData() async {
     LinkedHashMap<String, Product> products = LinkedHashMap<String, Product>();
 
-    List<FridgeItem> fetchedFridgeItems = await fetchAndDescryptFridge(db, _currentFridge.fridgeID, user);
+    List<FridgeItem> fetchedFridgeItems = await db.getFridgeContent(_currentFridge.fridgeID, user.uid);
+    //await fetchAndDescryptFridge(db, _currentFridge.fridgeID, user);
 
     if (fetchedFridgeItems?.iterator != null) {
       for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
@@ -129,7 +131,7 @@ class FridgePageState extends State<FridgePage> {
         products[fetchedFridgeItem?.product_puid] = product;
       }
     }
-
+    // print('fetched');
     if (mounted) {
       setState(() {
         fetchedFridgeItems.sort();
@@ -584,7 +586,8 @@ class FridgePageState extends State<FridgePage> {
       String usersEncryptionPass = await readEncryptionPassword(user.uid);
 
       String encryptedFridgeItem = fridgeItem.asEncodedString(usersEncryptionPass);
-      await db.updateEncryptedFridgeItem(fridgeItem.fridge_id, fridgeItem.dbKey, encryptedFridgeItem);
+      // await db.updateEncryptedFridgeItem(fridgeItem.fridge_id, fridgeItem.dbKey, encryptedFridgeItem);
+      await db.updateFridgeItem(fridgeItem);
       _refreshCurrentFridge();
     }
   }
@@ -633,7 +636,8 @@ class FridgePageState extends State<FridgePage> {
     fridgeItem.qty = int.parse(newQty);
     String usersEncryptionPass = await readEncryptionPassword(user.uid);
     String encryptedFridgeItem = fridgeItem.asEncodedString(usersEncryptionPass);
-    await db.updateEncryptedFridgeItem(fridgeItem.fridge_id, fridgeItem.dbKey, encryptedFridgeItem);
+    // await db.updateEncryptedFridgeItem(fridgeItem.fridge_id, fridgeItem.dbKey, encryptedFridgeItem);
+    await db.updateFridgeItem(fridgeItem);
     _refreshCurrentFridge();
   }
 
@@ -694,7 +698,8 @@ class FridgePageState extends State<FridgePage> {
     FridgeItem toBeDeletedFridgeItem = _usersCurrentFridgeItems[index];
     Product product = await db.getProductByPUID(toBeDeletedFridgeItem.product_puid);
     FlutterNotification().removeNotification(product, toBeDeletedFridgeItem);
-    await db.deleteEncryptedFridgeItem(toBeDeletedFridgeItem.fridge_id, toBeDeletedFridgeItem.dbKey);
+    // await db.deleteEncryptedFridgeItem(toBeDeletedFridgeItem.fridge_id, toBeDeletedFridgeItem.dbKey);
+    await db.deleteFridgeItem(toBeDeletedFridgeItem);
     FlutterNotification().clearNotifications();
     _refreshCurrentFridge();
   }
@@ -788,7 +793,8 @@ class FridgePageState extends State<FridgePage> {
 
     //delete or deduct in current fridge
     if (fridgeItem.qty == moveQty) {
-      await db.deleteEncryptedFridgeItem(fridgeItem.fridge_id, fridgeItem.dbKey);
+      // await db.deleteEncryptedFridgeItem(fridgeItem.fridge_id, fridgeItem.dbKey);
+      await db.deleteFridgeItem(fridgeItem);
     } else {
       await _changeFridgeItemQty(index, '${fridgeItem.qty - moveQty}');
     }
@@ -797,13 +803,15 @@ class FridgePageState extends State<FridgePage> {
     fridgeItem.fridge_id = fridgeID;
     fridgeItem.qty = moveQty;
 
-    List<FridgeItem> destinationFridgeItems = await fetchAndDescryptFridge(db, fridgeID, user);
+    List<FridgeItem> destinationFridgeItems =
+        await db.getFridgeContent(fridgeID, user.uid); //fetchAndDescryptFridge(db, fridgeID, user);
     FridgeItem existingSimilarItem = getSimilarItemInFridge(destinationFridgeItems, fridgeItem);
     if (existingSimilarItem != null) {
       await _updateExistingItem(destinationFridgeItems, existingSimilarItem, fridgeItem);
     } else {
       String encryptionPassword = await readEncryptionPassword(user.uid);
-      await db.addToFridgeEncrypted(fridgeItem.asEncodedString(encryptionPassword), fridgeID);
+      // await db.addToFridgeEncrypted(fridgeItem.asEncodedString(encryptionPassword), fridgeID);
+      await db.addToFridge(fridgeItem, user.uid);
     }
     Navigator.pop(context);
     _refreshCurrentFridge();
@@ -816,7 +824,8 @@ class FridgePageState extends State<FridgePage> {
     existingSimilarItem.qty += fridgeItem.qty;
     String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
     String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
-    db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
+    // db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
+    db.updateFridgeItem(fridgeItem);
     fridgeContent.add(existingSimilarItem);
   }
   //---------------------------- /flutter widgets ------------------------------
