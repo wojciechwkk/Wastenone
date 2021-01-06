@@ -46,6 +46,7 @@ dependencies:
   flutter_native_timezone: ^1.0.4
   fluttertoast: ^7.1.6
   image_picker: ^0.6.7+17
+  sembast: ^2.4.8+1
 
 dev_dependencies:
   flutter_test:

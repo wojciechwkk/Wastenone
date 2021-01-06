@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/app/log_in/log_in_with_email_widget.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
+import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 

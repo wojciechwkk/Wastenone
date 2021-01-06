@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
@@ -5,6 +6,7 @@ import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
 import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/add_product.dart';
@@ -12,7 +14,8 @@ import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/fridge_util.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
+import 'package:waste_none_app/services/local_nosql_cache.dart';
+import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
@@ -293,9 +296,6 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   _addItemToFridgeAction(FridgeItem fridgeItem) async {
     if (product != null) {
       if (widget.qtyValidator.isValid(_qtyTextController.text)) {
-        bool isInProductsTable = await db?.isInProductsWNDB(product?.eanCode);
-        if (!isInProductsTable) db?.addProduct(product);
-
         if (fridgeItem != null && !fridgeItem.isEmpty()) {
           FridgeItem existingSimilarItem = getSimilarItemInFridge(fridgeContent, fridgeItem);
           if (existingSimilarItem != null) {
@@ -304,7 +304,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           } else {
             await _addNewItem(fridgeItem);
             print("item added");
-            Product product = await db.getProductByPUID(fridgeItem.product_puid);
+            Product product = await db.getProductByEanCode(fridgeItem.product_ean);
             FlutterNotification().addExpiryNotification(auth.currentUser(), product, fridgeItem);
           }
           FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
@@ -328,7 +328,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
     String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
     // db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
-    db.updateFridgeItem(fridgeItem);
+    db.updateFridgeItem(existingSimilarItem);
     fridgeContent.add(existingSimilarItem);
   }
 
@@ -345,7 +345,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   Future<FridgeItem> _prepareFridgeItem(String qty) async {
     FridgeItem fridgeItem = FridgeItem();
     fridgeItem.fridge_id = fridge.fridgeID;
-    fridgeItem.product_puid = product?.puid;
+    fridgeItem.product_ean = product?.eanCode;
     fridgeItem.qty = num.parse(qty);
     fridgeItem.validDate = "${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}";
     fridgeItem.comment = "comment 1";
@@ -374,13 +374,23 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
     _loadingProductData = true;
 
-    //print(eanCode);
-    _productFetched = await _fetchFromWasteNoneDB(eanCode);
-    print("product found in WasteNone database: $_productFetched");
+    _productFetched = await _fetchFromLocalCache(eanCode);
+    print("product found in local cache: $_productFetched");
+
     if (!_productFetched) {
-      _productFetched = await _lookUpInExtDB(eanCode);
-      print("product found in external database: $_productFetched");
+      _productFetched = await _fetchFromWasteNoneDB(eanCode);
+      print("product found in WasteNone database: $_productFetched");
+      if (!_productFetched) {
+        _productFetched = await _lookUpInExtDB(eanCode);
+        print("product found in external database: $_productFetched");
+
+        //add to the WasteNone database
+        db.addProduct(product);
+      }
+      //add to user cache
+      storeProductToLocalCache(product);
     }
+
     if (_productFetched)
       setProductInfo();
     else
@@ -391,6 +401,16 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
 //---------------------------------- /scan item --------------------------------
 
+  Future<bool> _fetchFromLocalCache(String eanCode) async {
+    var productJson = await getProductFromCacheByEANCode(eanCode);
+    if (productJson != null) {
+      setState(() {
+        product = Product.fromLinkedHashMap(productJson);
+      });
+      return true;
+    } else
+      return false;
+  }
 //---------------------------------- WN DB -------------------------------------
 
   Future<bool> _fetchFromWasteNoneDB(String eanCode) async {
@@ -426,7 +446,6 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       print(response.body);
 
       Product productFromGs1 = Product();
-      productFromGs1.puid = Uuid().v1();
       productFromGs1.name = _getSomeProdNameFromResponse(productJson);
       productFromGs1.eanCode = eanCode;
       productFromGs1.brand = productJson["brands"];

@@ -149,7 +149,7 @@ class WNFirebaseDB implements DBBase {
         await _firebaseDB.reference().child("product").orderByChild('eanCode').equalTo(eanCode).once();
     if (snapshot != null && snapshot.value != null) {
       var productMap = Map<String, dynamic>.from(snapshot.value);
-      return Product.fromMap(productMap.values.elementAt(0));
+      return Product.fromLinkedHashMap(productMap.values.elementAt(0));
     }
     return null;
   }
@@ -160,7 +160,7 @@ class WNFirebaseDB implements DBBase {
     if (snapshot != null && snapshot.value != null) {
       var productMap = Map<String, dynamic>.from(snapshot.value);
 //    print("getProductWNDB: ${productMap.values.elementAt(0).runtimeType}");
-      return Product.fromMap(productMap.values.elementAt(0));
+      return Product.fromLinkedHashMap(productMap.values.elementAt(0));
     }
     return null;
   }
@@ -233,7 +233,6 @@ class WNFirebaseDB implements DBBase {
       for (var fridgeItemKey in fridgeItemsMap.keys) {
         fridgeItemsResult.add(FridgeItem.fromMap(fridgeItemKey, fridgeItemsMap[fridgeItemKey]));
       }
-      print('db: sorting fridge');
       fridgeItemsResult.sort();
       return fridgeItemsResult;
     }

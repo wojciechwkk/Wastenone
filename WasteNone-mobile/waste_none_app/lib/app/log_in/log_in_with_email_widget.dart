@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/app/log_in/social_log_in_button.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
+import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/form_submit_button.dart';
 import 'package:waste_none_app/services/base_classes.dart';

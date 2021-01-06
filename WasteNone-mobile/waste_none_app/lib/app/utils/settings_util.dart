@@ -1,7 +1,10 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:io';
+
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
+import 'package:waste_none_app/services/secure_storage.dart';
 
 enum TimeFormatEnum { ampm, a24h }
 enum SystemOfUnits { metric, imperial }
@@ -27,6 +30,13 @@ String getSettingsKey(SettingsKeysEnum settingsKeyEnum, String userUid) {
     default:
       return '';
   }
+}
+
+Future<String> getLocalCachePath() async {
+  Directory dir = await getApplicationDocumentsDirectory();
+  await dir.create(recursive: true);
+  String dbPath = join(dir.path, 'localCache.db');
+  return dbPath;
 }
 
 // Future<bool> isUsersTimeFormat24hs(WasteNoneUser user, BuildContext context) async {

@@ -9,7 +9,7 @@ import 'package:waste_none_app/app/utils/cryptography_util.dart';
   String dbKey;
   String fuid;
   String fridge_id;
-  String product_puid;
+  String product_ean;
   int qty;
   String validDate;
   String comment;
@@ -20,7 +20,7 @@ class FridgeItem implements Comparable {
   String dbKey;
   String fuid;
   String fridge_id;
-  String product_puid;
+  String product_ean;
   int qty;
   String validDate;
   String comment;
@@ -29,7 +29,7 @@ class FridgeItem implements Comparable {
       : dbKey = snapshot.key,
         fuid = snapshot.value["fuid"],
         fridge_id = snapshot.value["fridge_no"],
-        product_puid = snapshot.value["product_puid"],
+        product_ean = snapshot.value["product_ean"],
         qty = snapshot.value["qty"],
         validDate = snapshot.value["validDate"],
         comment = snapshot.value["comment"];
@@ -38,7 +38,7 @@ class FridgeItem implements Comparable {
       : dbKey = key,
         fuid = valueMap["fuid"],
         fridge_id = valueMap["fridge_no"],
-        product_puid = valueMap["product_puid"],
+        product_ean = valueMap["product_ean"],
         qty = valueMap["qty"],
         validDate = valueMap["validDate"],
         comment = valueMap["comment"];
@@ -48,7 +48,7 @@ class FridgeItem implements Comparable {
       "dbKey": dbKey,
       "fuid": fuid,
       "fridge_no": fridge_id,
-      "product_puid": product_puid,
+      "product_ean": product_ean,
       "qty": qty,
       "validDate": validDate,
       "comment": comment,
@@ -58,7 +58,7 @@ class FridgeItem implements Comparable {
   toJson() {
     return {
       "fridge_no": fridge_id,
-      "product_puid": product_puid,
+      "product_ean": product_ean,
       "qty": qty,
       "validDate": validDate,
       "comment": comment,
@@ -70,7 +70,7 @@ class FridgeItem implements Comparable {
   }
 
   bool isEmpty() {
-    return fridge_id == null || product_puid == null;
+    return fridge_id == null || product_ean == null;
   }
 
   @override
@@ -85,4 +85,12 @@ class FridgeItem implements Comparable {
   DateTime getValidDateAsDate() {
     return new DateFormat("yyyy-MM-dd").parse(this.validDate);
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is FridgeItem && this.product_ean == other.product_ean && this.validDate == other.validDate;
+  }
+
+  @override
+  int get hashCode => this.product_ean.hashCode + this.validDate.hashCode;
 }

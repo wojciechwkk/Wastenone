@@ -9,12 +9,15 @@ import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:sembast/sembast.dart';
+import 'package:sembast/sembast_io.dart';
 import 'package:waste_none_app/app/scan_and_add.dart';
 import 'package:waste_none_app/app/settings_window.dart';
 import 'package:waste_none_app/app/utils/cryptography_util.dart';
 import 'package:waste_none_app/app/utils/fridge_util.dart';
 import 'package:waste_none_app/app/utils/settings_util.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
+import 'package:waste_none_app/services/local_nosql_cache.dart';
+import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
@@ -127,8 +130,8 @@ class FridgePageState extends State<FridgePage> {
 
     if (fetchedFridgeItems?.iterator != null) {
       for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
-        Product product = await _getProductsDetails(fetchedFridgeItem?.product_puid);
-        products[fetchedFridgeItem?.product_puid] = product;
+        Product product = await _getProductsDetails(fetchedFridgeItem?.product_ean);
+        products[fetchedFridgeItem?.product_ean] = product;
       }
     }
     // print('fetched');
@@ -193,7 +196,7 @@ class FridgePageState extends State<FridgePage> {
                       }
                       if (_usersCurrentFridgeItems != null) {
                         index--;
-                        Product productDetails = usersCurrentProducts[_usersCurrentFridgeItems[index]?.product_puid];
+                        Product productDetails = usersCurrentProducts[_usersCurrentFridgeItems[index]?.product_ean];
                         String productName = "${productDetails?.name}";
                         int qty = _usersCurrentFridgeItems[index]?.qty;
                         String description = "${_usersCurrentFridgeItems[index]?.validDate} ";
@@ -696,7 +699,7 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _deleteFridgeItem(int index) async {
     FridgeItem toBeDeletedFridgeItem = _usersCurrentFridgeItems[index];
-    Product product = await db.getProductByPUID(toBeDeletedFridgeItem.product_puid);
+    Product product = await db.getProductByEanCode(toBeDeletedFridgeItem.product_ean);
     FlutterNotification().removeNotification(product, toBeDeletedFridgeItem);
     // await db.deleteEncryptedFridgeItem(toBeDeletedFridgeItem.fridge_id, toBeDeletedFridgeItem.dbKey);
     await db.deleteFridgeItem(toBeDeletedFridgeItem);
@@ -807,9 +810,10 @@ class FridgePageState extends State<FridgePage> {
         await db.getFridgeContent(fridgeID, user.uid); //fetchAndDescryptFridge(db, fridgeID, user);
     FridgeItem existingSimilarItem = getSimilarItemInFridge(destinationFridgeItems, fridgeItem);
     if (existingSimilarItem != null) {
+      print('update');
       await _updateExistingItem(destinationFridgeItems, existingSimilarItem, fridgeItem);
     } else {
-      String encryptionPassword = await readEncryptionPassword(user.uid);
+      // String encryptionPassword = await readEncryptionPassword(user.uid);
       // await db.addToFridgeEncrypted(fridgeItem.asEncodedString(encryptionPassword), fridgeID);
       await db.addToFridge(fridgeItem, user.uid);
     }
@@ -820,18 +824,22 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _updateExistingItem(
       List<FridgeItem> fridgeContent, FridgeItem existingSimilarItem, FridgeItem fridgeItem) async {
-    fridgeContent.remove(existingSimilarItem);
+    // fridgeContent.remove(existingSimilarItem);
     existingSimilarItem.qty += fridgeItem.qty;
-    String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
-    String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
+    // String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
+    // String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
     // db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
-    db.updateFridgeItem(fridgeItem);
-    fridgeContent.add(existingSimilarItem);
+    db.updateFridgeItem(existingSimilarItem);
+    // fridgeContent.add(existingSimilarItem);
   }
   //---------------------------- /flutter widgets ------------------------------
 
-  Future<Product> _getProductsDetails(String puid) async {
-    return await db.getProductByPUID(puid);
+  Future<Product> _getProductsDetails(String productEan) async {
+    // local cache -> wastenone db
+    var productJson = await getProductFromCacheByEANCode(productEan);
+    Product product = Product.fromMap(productJson);
+    if (product != null) return product;
+    return await db.getProductByEanCode(productEan);
   }
 
   _refreshCurrentFridge() {

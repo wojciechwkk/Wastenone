@@ -1,17 +1,13 @@
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/user.dart';
-import 'package:waste_none_app/app/utils/storage_util.dart';
+import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
 import 'cryptography_util.dart';
 
 FridgeItem getSimilarItemInFridge(List<FridgeItem> fridgeItemList, FridgeItem fridgeItem) {
   for (FridgeItem existingFridgeItem in fridgeItemList) {
-    if (existingFridgeItem.product_puid == fridgeItem.product_puid) {
-      if (existingFridgeItem.validDate == fridgeItem.validDate) {
-        return existingFridgeItem;
-      }
-    }
+    if (existingFridgeItem == fridgeItem) return existingFridgeItem;
   }
   return null;
 }
