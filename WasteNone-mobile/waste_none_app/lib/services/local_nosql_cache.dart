@@ -18,3 +18,17 @@ Future<dynamic> getProductFromCacheByEANCode(String eanCode) async {
   var productJson = await StoreRef.main().record('$_PRODUCT_KEY-$eanCode').get(localCache) as Map;
   return productJson;
 }
+
+Future<List<Product>> getAllCachedProducts() async {
+  String localCachePath = await getLocalCachePath();
+  Database localCache = await databaseFactoryIo.openDatabase(localCachePath);
+  final snapshot = await StoreRef.main().find(localCache);
+  return snapshot.map((snapshot) => Product.fromMap(snapshot.value)).toList(growable: false);
+}
+
+clearCachedProducts() async {
+  String localCachePath = await getLocalCachePath();
+  Database localCache = await databaseFactoryIo.openDatabase(localCachePath);
+  await StoreRef.main().delete(localCache);
+  getLocalCachePath();
+}

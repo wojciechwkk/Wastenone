@@ -10,6 +10,9 @@ import 'package:waste_none_app/common_widgets/loading_indicator.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 import 'package:waste_none_app/services/flutter_notification.dart';
+import 'package:waste_none_app/services/local_nosql_cache.dart';
+
+import 'models/product.dart';
 
 class SettingsWindow extends StatefulWidget {
   SettingsWindow({@required this.auth, @required this.db, @required this.user});
@@ -175,15 +178,25 @@ class _SettingsWindowState extends State<SettingsWindow> {
                           _changeUnitsSystem(value);
                         },
                       ),
+                      // SimpleSettingsTile(
+                      //   title: 'Print notifications',
+                      //   subtitle: '',
+                      //   onTap: _printNotifications,
+                      // ),
                       SimpleSettingsTile(
                         title: 'Clear notifications',
                         subtitle: '',
                         onTap: _clearNotifications,
                       ),
+                      // SimpleSettingsTile(
+                      //   title: 'Print cached prods',
+                      //   subtitle: '',
+                      //   onTap: _printCachedProducts,
+                      // ),
                       SimpleSettingsTile(
-                        title: 'Print notifications',
+                        title: 'Clear cached products',
                         subtitle: '',
-                        onTap: _printNotifications,
+                        onTap: _clearCachedProducts,
                       ),
                     ],
                   ),
@@ -212,5 +225,16 @@ class _SettingsWindowState extends State<SettingsWindow> {
     else {
       return '$hour$_ampmForWidget';
     }
+  }
+
+  _printCachedProducts() async {
+    List<Product> storedInCache = await getAllCachedProducts();
+    print('Cached ${storedInCache.length} products: ');
+    storedInCache.forEach((e) => print(e.toJson()));
+  }
+
+  _clearCachedProducts() async {
+    clearCachedProducts();
+    print('cache cleared');
   }
 }

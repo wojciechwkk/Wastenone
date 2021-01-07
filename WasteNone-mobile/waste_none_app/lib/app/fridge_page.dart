@@ -124,10 +124,8 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _fetchUserFridgeData() async {
     LinkedHashMap<String, Product> products = LinkedHashMap<String, Product>();
-
     List<FridgeItem> fetchedFridgeItems = await db.getFridgeContent(_currentFridge.fridgeID, user.uid);
     //await fetchAndDescryptFridge(db, _currentFridge.fridgeID, user);
-
     if (fetchedFridgeItems?.iterator != null) {
       for (FridgeItem fetchedFridgeItem in fetchedFridgeItems) {
         Product product = await _getProductsDetails(fetchedFridgeItem?.product_ean);
@@ -200,9 +198,12 @@ class FridgePageState extends State<FridgePage> {
                         String productName = "${productDetails?.name}";
                         int qty = _usersCurrentFridgeItems[index]?.qty;
                         String description = "${_usersCurrentFridgeItems[index]?.validDate} ";
-                        String productLink = productDetails?.picLink;
-
-                        return _sliderFridgeItemWidget(productLink, productName, description, index, qty);
+                        ProductImage productImage = ProductImage(
+                          newProduct: false,
+                          picLink: productDetails.picLink,
+                          picFilePath: productDetails.picPath,
+                        );
+                        return _sliderFridgeItemWidget(productImage, productName, description, index, qty);
                       } else
                         return null;
                     },
@@ -505,7 +506,8 @@ class FridgePageState extends State<FridgePage> {
     }
   }
 
-  Widget _sliderFridgeItemWidget(String productLink, String productName, String description, int index, int qty) {
+  Widget _sliderFridgeItemWidget(
+      ProductImage productImage, String productName, String description, int index, int qty) {
     return Slidable(
       actionPane: SlidableScrollActionPane(),
       actionExtentRatio: 0.25,
@@ -517,7 +519,7 @@ class FridgePageState extends State<FridgePage> {
                   },
               dense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 4.0),
-              leading: ProductImage(newProduct: false, picLink: productLink, picFile: null),
+              leading: productImage,
               //title: Text('Tile n°$index'),
               title: Text(productName),
               subtitle: Text(description),
@@ -719,8 +721,23 @@ class FridgePageState extends State<FridgePage> {
   }
 
   Future _moveToAnotherFridge(int moveItemIndex, BuildContext context) async {
-    int moveQty = await _showMoveToAnotherFridgeQtyPopup(moveItemIndex, context);
-    if (moveQty != null) _showMoveToAnotherFridgeLocationPopup(moveItemIndex, moveQty, context);
+    if (_usersFridges.length == 1)
+      _showOnlyOneFridgeError();
+    else {
+      int moveQty = await _showMoveToAnotherFridgeQtyPopup(moveItemIndex, context);
+      if (moveQty != null) _showMoveToAnotherFridgeLocationPopup(moveItemIndex, moveQty, context);
+    }
+  }
+
+  _showOnlyOneFridgeError() {
+    Fluttertoast.showToast(
+        msg: "You got only one fridge defined.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 3,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0);
   }
 
   Future<int> _showMoveToAnotherFridgeQtyPopup(int moveItemIndex, BuildContext context) async {
@@ -824,20 +841,15 @@ class FridgePageState extends State<FridgePage> {
 
   Future<void> _updateExistingItem(
       List<FridgeItem> fridgeContent, FridgeItem existingSimilarItem, FridgeItem fridgeItem) async {
-    // fridgeContent.remove(existingSimilarItem);
     existingSimilarItem.qty += fridgeItem.qty;
-    // String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
-    // String encryptedUpdatedFridgeItem = existingSimilarItem.asEncodedString(encryptionPassword);
-    // db.updateEncryptedFridgeItem(existingSimilarItem.fridge_id, existingSimilarItem.dbKey, encryptedUpdatedFridgeItem);
     db.updateFridgeItem(existingSimilarItem);
-    // fridgeContent.add(existingSimilarItem);
   }
   //---------------------------- /flutter widgets ------------------------------
 
   Future<Product> _getProductsDetails(String productEan) async {
     // local cache -> wastenone db
     var productJson = await getProductFromCacheByEANCode(productEan);
-    Product product = Product.fromMap(productJson);
+    Product product = productJson != null ? Product.fromMap(productJson) : null;
     if (product != null) return product;
     return await db.getProductByEanCode(productEan);
   }

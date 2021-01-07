@@ -3,15 +3,16 @@ import 'dart:collection';
 import 'package:firebase_database/firebase_database.dart';
 
 class Product {
-  Product();
+  Product(this.eanCode);
 
   // String puid;
   String eanCode;
   String name;
   String brand;
   String owner;
-  String picLink =
-      "https://image.shutterstock.com/z/stock-vector-avocado-green-flat-icon-on-white-background-434253583.jpg";
+  String picLink;
+  // = "https://image.shutterstock.com/z/stock-vector-avocado-green-flat-icon-on-white-background-434253583.jpg";
+  String picPath;
   String ingredients;
   String type;
   String size;
@@ -22,6 +23,7 @@ class Product {
         brand = snapshot.value["brand"],
         owner = snapshot.value["owner"],
         picLink = snapshot.value["picLink"],
+        picPath = snapshot.value["picPath"],
         ingredients = snapshot.value["ingredients"],
         type = snapshot.value["type"],
         size = snapshot.value["size"];
@@ -32,6 +34,7 @@ class Product {
         brand = valueMap["brand"],
         owner = valueMap["owner"],
         picLink = valueMap["picLink"],
+        picPath = valueMap["picPath"],
         ingredients = valueMap["ingredients"],
         type = valueMap["type"],
         size = valueMap["size"];
@@ -42,6 +45,7 @@ class Product {
         brand = valueMap["brand"],
         owner = valueMap["owner"],
         picLink = valueMap["picLink"],
+        picPath = valueMap["picPath"],
         ingredients = valueMap["ingredients"],
         type = valueMap["type"],
         size = valueMap["size"];
@@ -53,6 +57,7 @@ class Product {
       "brand": brand,
       "owner": owner,
       "picLink": picLink,
+      "picPath": picPath,
       "ingredients": ingredients,
       "type": type,
       "size": size,
@@ -66,6 +71,7 @@ class Product {
       "brand": brand,
       "owner": owner,
       "picLink": picLink,
+      "picPath": picPath,
       "ingredients": ingredients,
       "type": type,
       "size": size,

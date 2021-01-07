@@ -3,35 +3,43 @@ import 'dart:typed_data';
 import 'package:flutter/cupertino.dart' as cup;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:waste_none_app/app/models/user.dart';
 import 'package:waste_none_app/app/utils/settings_util.dart';
 import 'package:waste_none_app/common_widgets/product_image.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
+import 'package:waste_none_app/services/local_nosql_cache.dart';
+
+import 'models/product.dart';
 
 class AddProductPage extends StatefulWidget {
-  AddProductPage({@required this.auth, @required this.db, @required this.user});
+  AddProductPage({@required this.auth, @required this.db, @required this.user, @required this.newProduct});
 
   final AuthBase auth;
   final WNFirebaseDB db;
   final WasteNoneUser user;
+  final Product newProduct;
 
   @override
-  State<StatefulWidget> createState() => _AddProductPageState(auth: this.auth, db: this.db, user: this.user);
+  State<StatefulWidget> createState() =>
+      _AddProductPageState(auth: this.auth, db: this.db, user: this.user, newProduct: newProduct);
 }
 
 class _AddProductPageState extends State<AddProductPage> {
-  _AddProductPageState({@required this.auth, @required this.db, @required this.user});
+  _AddProductPageState({@required this.auth, @required this.db, @required this.user, @required this.newProduct});
 
   final AuthBase auth;
   final WNFirebaseDB db;
   final WasteNoneUser user;
+  final Product newProduct;
 
-  TextEditingController _newProductBrandController;
-  TextEditingController _newProductNameController;
-  TextEditingController _newProductEANController;
-  TextEditingController _newProductSizeController;
+  TextEditingController _newProductEANController = TextEditingController();
+  TextEditingController _newProductBrandController = TextEditingController();
+  TextEditingController _newProductNameController = TextEditingController();
+  TextEditingController _newProductSizeController = TextEditingController();
+  TextEditingController _newProductUnitController = cup.TextEditingController();
 
   final picker = ImagePicker();
   ProductImage _image;
@@ -51,8 +59,9 @@ class _AddProductPageState extends State<AddProductPage> {
     _image = ProductImage(
       newProduct: true,
       picLink: null,
-      picFile: null,
+      picFilePath: null,
     );
+    _newProductEANController.text = newProduct.eanCode;
     super.initState();
   }
 
@@ -94,6 +103,7 @@ class _AddProductPageState extends State<AddProductPage> {
                                   labelText: 'EAN Code',
                                   enabled: true,
                                 ),
+                                enabled: false,
                                 // onChanged: (qty) => _qtyChangedState,
                               ),
                               TextFormField(
@@ -157,9 +167,9 @@ class _AddProductPageState extends State<AddProductPage> {
                                               ],
                                             ),
                                         ],
-                                        // onSelectedItemChanged: (int index) {
-                                        //   print('good boi');
-                                        // },
+                                        onSelectedItemChanged: (int index) {
+                                          _newProductUnitController.text = units.elementAt(index);
+                                        },
                                       ),
                                     ),
                                   ),
@@ -207,7 +217,27 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
-  _addProduct() {}
+  _addProduct() {
+    newProduct.name = _newProductNameController.text;
+    newProduct.brand = _newProductBrandController.text;
+    newProduct.size = _newProductSizeController.text + _newProductUnitController.text;
+    newProduct.picPath = _image.picFilePath; //TODO: add the local drive link for now.
+    print(newProduct.toJson());
+    storeProductToLocalCache(newProduct);
+    showAddedNotification();
+    Navigator.pop(context, newProduct);
+  }
+
+  showAddedNotification() {
+    Fluttertoast.showToast(
+        msg: "You have added a new product to your database! :)",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 3,
+        backgroundColor: Colors.lightGreen,
+        textColor: Colors.white,
+        fontSize: 16.0);
+  }
 
   Future<File> getImage() async {
     final pickedFile = await picker.getImage(source: ImageSource.camera);
@@ -230,12 +260,9 @@ class _AddProductPageState extends State<AddProductPage> {
 
     setState(() {
       imageCache.clear();
-      // cup.imageCache.clear();
       imageCache.clearLiveImages();
-      // cup.imageCache.clearLiveImages();
       imageCache.evict(_image);
-      // Image.memory(Uint8List.fromList(_image.readAsBytesSync()),, gaplessPlayback: true)
-      _image = ProductImage(newProduct: false, picLink: null, picFile: imageFile);
+      _image = ProductImage(newProduct: false, picLink: null, picFilePath: imageFile.path);
     });
   }
 }

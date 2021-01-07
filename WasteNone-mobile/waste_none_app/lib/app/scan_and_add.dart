@@ -1,6 +1,6 @@
 import 'dart:collection';
 import 'dart:convert';
-
+import 'dart:io';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
@@ -72,7 +72,9 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   String welcomeText = "WasteNone";
   String productInfo = "Product info";
-  String productPicLink;
+  // String _productPicLink;
+  // String _productPicPath;
+  ProductImage _productImage;
 
   bool _loadingProductData = false;
 
@@ -88,17 +90,18 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     super.initState();
     selectedDate = defaultSelectedDate;
     exampleEanCodes = [
-      '7630040403290',
-      '5054563003232',
-      '5900197022548',
-      '5900012005947',
-      '20645229',
-      '5900334012685',
-      '5449000133328',
-      '5901785301854',
-      // '5601009310333' //porto
+      // '7630040403290',
+      // '5054563003232',
+      // '5900197022548',
+      // '5900012005947',
+      // '20645229',
+      // '5900334012685',
+      // '5449000133328',
+      // '5901785301854',
+      '5601009310333' //porto
     ];
     _scanAction();
+    _productImage = ProductImage(newProduct: false);
   }
 
   @override
@@ -122,7 +125,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                           child: SizedBox(
                             width: MediaQuery.of(context).size.width * 0.30,
                             height: MediaQuery.of(context).size.width * 0.30,
-                            child: ProductImage(newProduct: false, picLink: productPicLink, picFile: null),
+                            child: _productImage,
                           ),
                         ),
                         Padding(
@@ -304,15 +307,17 @@ class _ScanAndAddState extends State<ScanAndAdd> {
           } else {
             await _addNewItem(fridgeItem);
             print("item added");
-            Product product = await db.getProductByEanCode(fridgeItem.product_ean);
-            FlutterNotification().addExpiryNotification(auth.currentUser(), product, fridgeItem);
+            Map<String, dynamic> productJson = await getProductFromCacheByEANCode(fridgeItem.product_ean);
+            Product product = Product.fromMap(productJson);
+            if (product == null) product = await db.getProductByEanCode(fridgeItem.product_ean);
+            if (product != null) FlutterNotification().addExpiryNotification(auth.currentUser(), product, fridgeItem);
           }
           FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
         }
         if (mounted) {
           setState(() {
             productInfo = "";
-            productPicLink = null;
+            _productImage = null;
           });
         }
         selectedDate = defaultSelectedDate;
@@ -370,7 +375,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   void _scanAction() async {
     // String eanCode = await _scanBarCode();
     String eanCode = exampleEanCodes[eanItemIndex];
-    eanItemIndex++;
+    eanItemIndex = eanItemIndex % exampleEanCodes.length;
 
     _loadingProductData = true;
 
@@ -385,16 +390,16 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         print("product found in external database: $_productFetched");
 
         //add to the WasteNone database
-        db.addProduct(product);
+        if (product != null) db.addProduct(product);
       }
       //add to user cache
-      storeProductToLocalCache(product);
+      if (product != null) storeProductToLocalCache(product);
     }
 
     if (_productFetched)
       setProductInfo();
     else
-      _showNotFoundMsg();
+      _showNotFoundMsg(eanCode);
 
     _loadingProductData = false;
   }
@@ -405,7 +410,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     var productJson = await getProductFromCacheByEANCode(eanCode);
     if (productJson != null) {
       setState(() {
-        product = Product.fromLinkedHashMap(productJson);
+        product = Product.fromMap(productJson);
       });
       return true;
     } else
@@ -445,9 +450,8 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     if (response.statusCode == 200 && responseJson["status_verbose"] == 'product found') {
       print(response.body);
 
-      Product productFromGs1 = Product();
+      Product productFromGs1 = Product(eanCode);
       productFromGs1.name = _getSomeProdNameFromResponse(productJson);
-      productFromGs1.eanCode = eanCode;
       productFromGs1.brand = productJson["brands"];
       productFromGs1.ingredients = productJson["ingredients_text"];
       var prodPicFromDB = productJson["image_front_url"] != null
@@ -485,14 +489,20 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   void _addNewProduct() async {
     print('add new product manually');
-    Navigator.push(
+    Product newProduct = await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => AddProductPage(
                   auth: auth,
                   db: db,
                   user: user,
+                  newProduct: product,
                 ))).whenComplete(() => {print('product added..')});
+    setState(() {
+      product = newProduct;
+      if (newProduct.picPath != null) _productImage = ProductImage(newProduct: false, picFilePath: newProduct.picPath);
+    });
+    setProductInfo();
   }
 
 //------------------------------- /ADD NEW PRODUCT -------------------------------
@@ -508,15 +518,17 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
       setState(() {
         productInfo = productInfoFromDB;
-        if (product.picLink != null) productPicLink = product.picLink;
+        _productImage = ProductImage(newProduct: false, picLink: product.picLink, picFilePath: product.picPath);
+        _productFetched = true;
       });
     }
   }
 
-  _showNotFoundMsg() {
+  _showNotFoundMsg(String eanCode) {
     print("product not found :(");
     setState(() {
       productInfo = "Product not found :(";
+      product = Product(eanCode);
     });
   }
 }
