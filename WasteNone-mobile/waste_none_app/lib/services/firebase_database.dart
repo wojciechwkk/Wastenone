@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:logger/logger.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
+import 'package:waste_none_app/app/models/invite.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/settings_window.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 
 class WNFirebaseDB implements DBBase {
@@ -20,8 +23,17 @@ class WNFirebaseDB implements DBBase {
     return false;
   }
 
+  Future<WasteNoneUser> getUserByEmail(String email) async {
+    DataSnapshot snapshot = await _firebaseDB.reference().child("user").orderByChild('email').equalTo(email).once();
+    if (snapshot != null && snapshot.value != null) {
+      var userMap = Map<String, dynamic>.from(snapshot.value);
+      return WasteNoneUser.fromMap(userMap.keys.elementAt(0), userMap.values.elementAt(0));
+    }
+    return null;
+  }
+
   Future createUser(WasteNoneUser user) async {
-    print("db: creating user in wastenone db: ${user.displayName}");
+    WasteNoneLogger().d("db: creating user in wastenone db: ${user.displayName}");
 
     DatabaseReference dbNewUserRef = _firebaseDB
         .reference()
@@ -32,7 +44,7 @@ class WNFirebaseDB implements DBBase {
     await dbNewUserRef.set(user.toJson());
   }
   // Future createUserEncrypted(WasteNoneUser user, String encodedUserData) async {
-  //   print("db: creating user in wastenone db: ${user.displayName} - encrypted");
+  //   WasteNoneLogger().d("db: creating user in wastenone db: ${user.displayName} - encrypted");
   //
   //   DatabaseReference dbNewUserRef = _firebaseDB
   //       .reference()
@@ -53,15 +65,15 @@ class WNFirebaseDB implements DBBase {
     return fridge.fridgeID;
   }
 
-  updateUser(WasteNoneUser user, String encodedUserData) async {
-    print('db: updating user ${user.toJson()}');
+  updateUser(WasteNoneUser user) async {
+    WasteNoneLogger().d('db: updating user ${user.toJson()}');
     if (user.dbRef != null) {
       DatabaseReference dbUserRef = _firebaseDB.reference().child("user").child(user.dbRef);
       await dbUserRef.set(user.toJson());
     }
   }
   // updateUserEncrypted(WasteNoneUser user, String encodedUserData) async {
-  //   print('db: updating user ${user.toJson()}');
+  //   WasteNoneLogger().d('db: updating user ${user.toJson()}');
   //   if (user.dbRef != null) {
   //     DatabaseReference dbUserRef = _firebaseDB.reference().child("user").child(user.dbRef);
   //     await dbUserRef.set({"uid": user.uid, "userData": encodedUserData});
@@ -69,7 +81,7 @@ class WNFirebaseDB implements DBBase {
   // }
 
   deleteUser(WasteNoneUser user) async {
-    print('db: deleting user ${user?.toJson()}');
+    WasteNoneLogger().d('db: deleting user ${user?.toJson()}');
     if (user != null) {
       user?.getFridgeIDs()?.forEach((fridgeId) => deleteFridge(fridgeId));
       if (user.dbRef != null) {
@@ -78,7 +90,7 @@ class WNFirebaseDB implements DBBase {
     }
   }
   // deleteUserEncrypted(WasteNoneUser user) async {
-  //   print('db: deleting user ${user?.toJson()}');
+  //   WasteNoneLogger().d('db: deleting user ${user?.toJson()}');
   //   if (user != null) {
   //     user?.getFridgeIDs()?.forEach((fridgeId) => deleteFridge(fridgeId));
   //     if (user.dbRef != null) {
@@ -94,7 +106,7 @@ class WNFirebaseDB implements DBBase {
    */
   // Future<Map<dynamic, dynamic>> getUserData(String uid) async {
   Future<WasteNoneUser> getUserData(String uid) async {
-    print('db: fetching user $uid');
+    WasteNoneLogger().d('db: fetching user $uid');
     DataSnapshot snapshot = await _firebaseDB.reference().child("user").orderByChild('uid').equalTo(uid).once();
 
     if (snapshot != null && snapshot.value != null) {
@@ -110,12 +122,12 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<List<Fridge>> getUsersFridges(WasteNoneUser user) async {
-    print("db: getting users fridges: ${user.displayName}, uid: ${user.uid}");
+    WasteNoneLogger().d("db: getting users fridges: ${user.displayName}, uid: ${user.uid}");
     DataSnapshot snapshot = await _firebaseDB.reference().child("fridge").orderByKey().startAt(user.uid).once();
 
     if (snapshot != null && snapshot.value != null) {
       var fridgeMap = Map<String, dynamic>.from(snapshot.value);
-
+      WasteNoneLogger().d('got ${fridgeMap.length} fridges');
       var fridgeResult = List<Fridge>();
       for (var fridgeKey in fridgeMap.keys) {
         var fridge = Map<String, dynamic>.from(fridgeMap[fridgeKey]);
@@ -133,18 +145,18 @@ class WNFirebaseDB implements DBBase {
 // --------------------------------------- product -----------------------------
 
   void getAllProducts() {
-    print("db: getting all products");
+    WasteNoneLogger().d("db: getting all products");
     Query _todoQuery = _firebaseDB.reference().child("products");
   }
 
   Future<bool> isInProductsWNDB(String eanCode) async {
-    print("db: checking if product with EAN: ${eanCode} is in the WNDB");
+    WasteNoneLogger().d("db: checking if product with EAN: ${eanCode} is in the WNDB");
     Product product = await getProductByEanCode(eanCode);
     return product != null;
   }
 
   Future<Product> getProductByEanCode(String eanCode) async {
-    // print("get product by EAN: $eanCode");
+    // WasteNoneLogger().d("get product by EAN: $eanCode");
     DataSnapshot snapshot =
         await _firebaseDB.reference().child("product").orderByChild('eanCode').equalTo(eanCode).once();
     if (snapshot != null && snapshot.value != null) {
@@ -155,18 +167,18 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<Product> getProductByPUID(String puid) async {
-    // print("get product by PUID: ${puid}");
+    // WasteNoneLogger().d("get product by PUID: ${puid}");
     DataSnapshot snapshot = await _firebaseDB.reference().child("product").orderByChild('puid').equalTo(puid).once();
     if (snapshot != null && snapshot.value != null) {
       var productMap = Map<String, dynamic>.from(snapshot.value);
-//    print("getProductWNDB: ${productMap.values.elementAt(0).runtimeType}");
+//    WasteNoneLogger().d("getProductWNDB: ${productMap.values.elementAt(0).runtimeType}");
       return Product.fromLinkedHashMap(productMap.values.elementAt(0));
     }
     return null;
   }
 
   void addProduct(Product product) {
-    print("db: adding product: ${product.name}");
+    WasteNoneLogger().d("db: adding product: ${product.name}");
     _firebaseDB.reference().child("product").push().set(product?.toJson());
   }
 
@@ -180,7 +192,7 @@ class WNFirebaseDB implements DBBase {
 // --------------------------------------- fridge ------------------------------
 
   Future<void> addFridge(Fridge fridge) async {
-    print("db: adding fridge: ${fridge.fridgeID}");
+    WasteNoneLogger().d("db: adding fridge: ${fridge.fridgeID}");
 
     DatabaseReference dbNewFridgeRef = _firebaseDB
         .reference()
@@ -192,25 +204,25 @@ class WNFirebaseDB implements DBBase {
   }
 
   Future<void> updateFridge(Fridge fridge) async {
-    print('db: updating fridge id: ${fridge.fridgeID}, dbkey ${fridge.dbKey}');
+    WasteNoneLogger().d('db: updating fridge id: ${fridge.fridgeID}, dbkey ${fridge.dbKey}');
     await _firebaseDB.reference().child("fridge/${fridge.fridgeID}/").child(fridge.dbKey).set(fridge.toJson());
   }
 
   addToFridge(FridgeItem fridgeItem, String uid) async {
-    print("db: adding item to fridge: ${fridgeItem.fridge_id}");
+    WasteNoneLogger().d("db: adding item to fridge: ${fridgeItem.fridge_id}");
     _firebaseDB.reference().child("fridge-contents/${fridgeItem.fridge_id}").push().set(fridgeItem.toJson());
   }
 
   // @deprecated
   // Future<String> addToFridgeEncrypted(String encryptedFridgeItem, String fridgeNo) async {
-  //   print("add encrypted item to fridge: $fridgeNo");
+  //   WasteNoneLogger().d("add encrypted item to fridge: $fridgeNo");
   //   DatabaseReference dbRef = _firebaseDB.reference().child("fridge-contents/$fridgeNo").push();
   //   dbRef.set(encryptedFridgeItem);
   //   return dbRef.key;
   // }
 
   Future<Fridge> getFridge(String fridgeID) async {
-    // print("get fridge: $fridgeID");
+    // WasteNoneLogger().d("get fridge: $fridgeID");
     DataSnapshot snapshot = await _firebaseDB.reference().child("fridge/$fridgeID").once();
     if (snapshot != null && snapshot.value != null) {
       var fridgeMap = Map<String, dynamic>.from(snapshot.value);
@@ -223,8 +235,8 @@ class WNFirebaseDB implements DBBase {
     return null;
   }
 
-  Future<List<FridgeItem>> getFridgeContent(String fridgeID, String uid) async {
-    print("db: getting fridge content for: $fridgeID");
+  Future<List<FridgeItem>> getFridgeContent(String fridgeID) async {
+    WasteNoneLogger().d("db: getting fridge content for: $fridgeID");
     DataSnapshot snapshot =
         await _firebaseDB.reference().child("fridge-contents/$fridgeID").orderByChild('validDate').once();
     if (snapshot != null && snapshot.value != null) {
@@ -253,7 +265,7 @@ class WNFirebaseDB implements DBBase {
   // }
 
   deleteFridgeItem(FridgeItem fridgeItem) async {
-    print('db: deleting fridge item ${fridgeItem?.toJson()}');
+    WasteNoneLogger().d('db: deleting fridge item ${fridgeItem?.toJson()}');
     if (fridgeItem != null) {
       await _firebaseDB.reference().child("fridge-contents/${fridgeItem.fridge_id}/").child(fridgeItem.dbKey).remove();
     }
@@ -266,7 +278,7 @@ class WNFirebaseDB implements DBBase {
 
   // @deprecated
   // Future<Map<String, String>> getFridgeEncryptedContent(String fridgeID, String uid) async {
-  //   print("db: getting encrypted fridge content for: $fridgeID");
+  //   WasteNoneLogger().d("db: getting encrypted fridge content for: $fridgeID");
   //   DataSnapshot snapshot = await _firebaseDB.reference().child("fridge-contents/$fridgeID").once();
   //
   //   if (snapshot != null && snapshot.value != null) {
@@ -279,25 +291,78 @@ class WNFirebaseDB implements DBBase {
   //     }
   //     return fridgeItemsResult;
   //   }
-  //   // print('get encrypted fridge got null');
+  //   // WasteNoneLogger().d('get encrypted fridge got null');
   //   return null;
   // }
 
   void removeFridge(String fridgeNo) async {
-    print("db: removing fridge: $fridgeNo");
+    WasteNoneLogger().d("db: removing fridge: $fridgeNo");
     _firebaseDB.reference().child("fridge-contents/$fridgeNo").remove();
   }
 
   emptyFridge(String fridgeId) {
-    print('db: emptying fridge $fridgeId');
+    WasteNoneLogger().d('db: emptying fridge $fridgeId');
     _firebaseDB.reference().child("fridge-contents/$fridgeId").remove();
   }
 
   deleteFridge(String fridgeId) {
-    print('db: deleting fridge $fridgeId');
+    WasteNoneLogger().d('db: deleting fridge $fridgeId');
     emptyFridge(fridgeId);
     _firebaseDB.reference().child("fridge/$fridgeId").remove();
   }
 
-// --------------------------------------- /fridge -----------------------------
+// --------------------------------------- /fridge ---------------------------------------------------------------------
+
+// ---------------------------------- share fridge ---------------------------------------------------------------------
+  inviteUserToShareFridge(ShareFridgeInvite invite) async {
+    WasteNoneLogger().d("db: share fridge: ${invite.fridgeID}");
+    DatabaseReference dbNewFridgeRef =
+        _firebaseDB.reference().child("fridge-share-invites/${invite.receiverUID}").push();
+
+    String inviteKey = dbNewFridgeRef.key;
+    await dbNewFridgeRef.set(invite.toJson());
+  }
+
+  Future<bool> invitationExists(ShareFridgeInvite invite) async {
+    WasteNoneLogger().d("db: does invite exist for: ${invite.receiverUID}");
+    DataSnapshot snapshot = await _firebaseDB.reference().child("fridge-share-invites/${invite.receiverUID}").once();
+    if (snapshot != null && snapshot.value != null) {
+      var invitesMap = Map<String, dynamic>.from(snapshot.value);
+      for (var invitesMapKey in invitesMap.keys) {
+        var inviteFromDB = invitesMap[invitesMapKey];
+        if (inviteFromDB["sender"] == invite.senderUID && inviteFromDB["fridgeID"] == invite.fridgeID) return true;
+      }
+    }
+    return false;
+  }
+
+  Future<List<ShareFridgeInvite>> getAwaitingInvites(String userUID) async {
+    WasteNoneLogger().d("db: does user $userUID have any awaiting invitations?");
+    DataSnapshot snapshot = await _firebaseDB.reference().child("fridge-share-invites/$userUID").once();
+    if (snapshot != null && snapshot.value != null) {
+      var invitesMap = Map<String, dynamic>.from(snapshot?.value);
+      return invitesMap.entries.map((entry) => ShareFridgeInvite.fromMap(entry.key, entry.value)).toList();
+    }
+    return null;
+  }
+
+  Future removeShareFridgeInvite(ShareFridgeInvite invite) async {
+    WasteNoneLogger().d("db: remove invite: ${invite.receiverUID}");
+    await _firebaseDB
+        .reference()
+        .child("fridge-share-invites/${invite.receiverUID}")
+        .child(invite.inviteDBRef)
+        .remove();
+  }
+// ---------------------------------- /share fridge --------------------------------------------------------------------
+
+// ---------------------------------- /logger --------------------------------------------------------------------------
+
+  storeLogger(WasteNoneUser user, String logger) async {
+    WasteNoneLogger().d("db: store logger");
+    DatabaseReference dbLogRef = _firebaseDB.reference().child("logger-${user.uid}").push();
+
+    String loggerKey = dbLogRef.key;
+    await dbLogRef.set({"log": logger});
+  }
 }

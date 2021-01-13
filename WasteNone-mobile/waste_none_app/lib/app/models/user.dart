@@ -2,16 +2,18 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:waste_none_app/app/utils/cryptography_util.dart';
 
 import 'fridge.dart';
 
 class WasteNoneUser {
-  WasteNoneUser(this.uid, this.displayName);
+  WasteNoneUser(this.uid, this.displayName, this.email);
 
   String uid;
   String dbRef;
   String displayName;
+  String email;
   List<dynamic> _fridgeIDs;
   // int fridgesCount;
 
@@ -19,6 +21,7 @@ class WasteNoneUser {
       : dbRef = snapshot.key,
         uid = snapshot.value["uid"],
         displayName = snapshot.value["displayName"],
+        email = snapshot.value["email"],
         _fridgeIDs = snapshot.value["fridgeIDs"] != null ? snapshot.value["fridgeIDs"] : List<dynamic>()
   // ,
   // fridgesCount = snapshot.value["fridgesAdded"]
@@ -28,6 +31,7 @@ class WasteNoneUser {
       : dbRef = key,
         uid = valueMap["uid"],
         displayName = valueMap["displayName"],
+        email = valueMap["email"],
         _fridgeIDs = valueMap["fridgeIDs"] != null ? valueMap["fridgeIDs"] : List<dynamic>()
   // ,
   // fridgesCount = valueMap["fridgesAdded"]
@@ -35,9 +39,10 @@ class WasteNoneUser {
 
   Map<String, dynamic> get map {
     return {
-      "dbRef": "dbRef",
+      "dbRef": dbRef,
       "uid": uid,
       "displayName": displayName,
+      "email": email,
       "fridgeIDs": _fridgeIDs,
       // "fridgesAdded": fridgesCount,
     };
@@ -48,6 +53,7 @@ class WasteNoneUser {
       "uid": uid,
       "dbRef": dbRef,
       "displayName": displayName,
+      "email": email,
       "fridgeIDs": _fridgeIDs,
       // "fridgesAdded": fridgesCount,
     };
@@ -92,7 +98,7 @@ class WasteNoneUser {
     return this.displayName == 'anonymous';
   }
 
-  asEncodedString(String usersEncodingPassword) {
-    return encryptAESCryptoJS(jsonEncode(this), usersEncodingPassword);
-  }
+  // asEncodedString(String usersEncodingPassword) {
+  //   return encryptAESCryptoJS(jsonEncode(this), usersEncodingPassword);
+  // }
 }

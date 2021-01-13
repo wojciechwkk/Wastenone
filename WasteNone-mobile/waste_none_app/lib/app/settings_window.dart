@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'dart:math';
 
+import 'package:logger/logger.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:async/async.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -32,8 +36,6 @@ class _SettingsWindowState extends State<SettingsWindow> {
   final WNFirebaseDB db;
   final WasteNoneUser user;
 
-  final AsyncMemoizer _memoizer = AsyncMemoizer();
-
   String TIME_FORMAT_KEY;
   String IS_12H_KEY;
   String EXPIRE_NOTIFY_DAYS_KEY;
@@ -48,18 +50,19 @@ class _SettingsWindowState extends State<SettingsWindow> {
   bool _isSystemMetric;
   String _metricSystem;
 
+  final AsyncMemoizer _memoizer = AsyncMemoizer();
   _setInitTimeFormat() {
     return this._memoizer.runOnce(() async {
       _setSettingsKeys();
-
       _is24hrsFormat = Settings.getValue(this.TIME_FORMAT_KEY, MediaQuery.of(context).alwaysUse24HourFormat);
       _maxNotifyTimeScale = _is24hrsFormat ? 23.0 : 11.0;
-      _notifyAtForWidget = Settings.getValue(this.EXPIRE_NOTIFY_HRS_KEY, 8);
-      _notifyDaysBefore = Settings.getValue(this.EXPIRE_NOTIFY_DAYS_KEY, 2);
       _ampmForWidget = Settings.getValue(this.IS_12H_KEY, false) ? 'pm' : 'am';
       _isSystemMetric = true; //TODO default based on devices country
       _metricSystem = Settings.getValue(this.METRIC_SYSTEM_KEY, true) ? 'metric' : 'imperial';
-      // Settings.clearCache();
+      _notifyDaysBefore = Settings.getValue(this.EXPIRE_NOTIFY_DAYS_KEY, 2);
+      double notifAt = Settings.getValue(this.EXPIRE_NOTIFY_HRS_KEY, 8);
+      _notifyAtForWidget = _is24hrsFormat ? notifAt : notifAt % 12;
+      // print('w: $_notifyAtForWidget max: $_maxNotifyTimeScale ampm: $_ampmForWidget');
     });
   }
 
@@ -77,20 +80,26 @@ class _SettingsWindowState extends State<SettingsWindow> {
       if (is24hrs) {
         _maxNotifyTimeScale = 23.0;
         if (_ampmForWidget == 'pm') {
+          // print('_notifyAtForWidget $_notifyAtForWidget');
           _notifyAtForWidget += 12.0;
+          // print('_notifyAtForWidget $_notifyAtForWidget');
         }
       } else {
         _maxNotifyTimeScale = 11.0;
         _ampmForWidget = _notifyAtForWidget ~/ 12 == 0 ? 'am' : 'pm';
+        // print('_notifyAtForWidget $_notifyAtForWidget');
         _notifyAtForWidget %= 12;
+        // print('_notifyAtForWidget $_notifyAtForWidget');
       }
     });
+    Settings.setValue(this.IS_12H_KEY, _ampmForWidget == 'pm');
   }
 
   _changeUnitsSystem(bool isSystemMetric) {
     setState(() {
       _isSystemMetric = isSystemMetric;
     });
+    Settings.setValue(this.METRIC_SYSTEM_KEY, _isSystemMetric);
   }
 
   @override
@@ -118,7 +127,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
                             step: 1,
                             leading: Icon(Icons.calendar_today_outlined),
                             onChange: (value) {
-                              // debugPrint('expiry-notify-days: $value');
+                              // debugWasteNoneLogger().d('expiry-notify-days: $value');
                               setState(() {
                                 _notifyDaysBefore = value;
                               });
@@ -179,9 +188,9 @@ class _SettingsWindowState extends State<SettingsWindow> {
                         },
                       ),
                       // SimpleSettingsTile(
-                      //   title: 'Print notifications',
+                      //   title: 'Logger().d notifications',
                       //   subtitle: '',
-                      //   onTap: _printNotifications,
+                      //   onTap: _Logger().dNotifications,
                       // ),
                       SimpleSettingsTile(
                         title: 'Clear notifications',
@@ -189,14 +198,19 @@ class _SettingsWindowState extends State<SettingsWindow> {
                         onTap: _clearNotifications,
                       ),
                       // SimpleSettingsTile(
-                      //   title: 'Print cached prods',
+                      //   title: 'Logger().d cached prods',
                       //   subtitle: '',
-                      //   onTap: _printCachedProducts,
+                      //   onTap: _Logger().dCachedProducts,
                       // ),
                       SimpleSettingsTile(
                         title: 'Clear cached products',
                         subtitle: '',
                         onTap: _clearCachedProducts,
+                      ),
+                      SimpleSettingsTile(
+                        title: 'Send console log',
+                        subtitle: '',
+                        onTap: _sendConsolLog,
                       ),
                     ],
                   ),
@@ -210,12 +224,12 @@ class _SettingsWindowState extends State<SettingsWindow> {
   }
 
   void _clearNotifications() {
-    print('clear notifications');
+    WasteNoneLogger().d('clear notifications');
     FlutterNotification().clearNotifications();
   }
 
   void _printNotifications() async {
-    print('print notifications');
+    WasteNoneLogger().d('print notifications');
     FlutterNotification().printNotifications();
   }
 
@@ -229,12 +243,52 @@ class _SettingsWindowState extends State<SettingsWindow> {
 
   _printCachedProducts() async {
     List<Product> storedInCache = await getAllCachedProducts();
-    print('Cached ${storedInCache.length} products: ');
-    storedInCache.forEach((e) => print(e.toJson()));
+    WasteNoneLogger().d('Cached ${storedInCache.length} products: ');
+    storedInCache.forEach((e) => WasteNoneLogger().d(e.toJson()));
   }
 
   _clearCachedProducts() async {
     clearCachedProducts();
-    print('cache cleared');
+    WasteNoneLogger().d('cache cleared');
+  }
+
+  _sendConsolLog() async {
+    WasteNoneLogger()
+        .d('                                        ----------------------------                                  ');
+    db.storeLogger(user, WasteNoneLogger().getFullLog());
+    WasteNoneLogger()
+        .d('                                        ----------------------------                                  ');
+  }
+}
+
+class WasteNoneLogger extends Logger {
+  static WasteNoneLogger instance;
+  static StringBuffer logBuffer;
+
+  static final WasteNoneLogger _wasteNoneLogger = WasteNoneLogger._internal();
+
+  factory WasteNoneLogger() {
+    return _wasteNoneLogger;
+  }
+
+  WasteNoneLogger._internal() {
+    logBuffer = StringBuffer();
+  }
+
+  void d(dynamic message, [dynamic error, StackTrace stackTrace]) {
+    logBuffer?.write(' | $message | ');
+    // print('Logger size: ${logBuffer.length}');
+    // super.d(message);
+    print(message);
+  }
+
+  String getFullLog() {
+    print('logger returned: ${logBuffer != null}');
+    return logBuffer?.toString();
+  }
+
+  clear() {
+    logBuffer?.clear();
+    print('logger cleaned: ${logBuffer != null}');
   }
 }

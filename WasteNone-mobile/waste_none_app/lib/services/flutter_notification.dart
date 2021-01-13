@@ -2,10 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
+import 'package:logger/logger.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/settings_window.dart';
 import 'package:waste_none_app/app/utils/settings_util.dart';
 
 import 'base_classes.dart';
@@ -38,7 +40,7 @@ class FlutterNotification implements NotificationBase {
 
   Future selectNotification(String payload) async {
     if (payload != null) {
-      //debugPrint('notification payload: $payload');
+      //debugWasteNoneLogger().d('notification payload: $payload');
     }
     // await Navigator.push(
     //   context,
@@ -121,7 +123,8 @@ ${product.name}''';
 
   Future<void> scheduleExpiryNotification(
       String productsName, DateTime validDate, tz.TZDateTime notificationTime, String payload) async {
-    print('scheduled notification: $productsName expires on $validDate, notification will show: $notificationTime');
+    Logger()
+        .d('scheduled notification: $productsName expires on $validDate, notification will show: $notificationTime');
     String title = int.parse(payload) > 1 ? 'Items' : 'Item';
     title += ' about to expire ${validDate.year}-${validDate.month}-${validDate.day}';
     await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -149,17 +152,17 @@ ${product.name}''';
   }
 
   void clearNotifications() {
-    print('clear notifications');
+    WasteNoneLogger().d('clear notifications');
     flutterLocalNotificationsPlugin.cancelAll();
   }
 
   void printNotifications() async {
-    print('print notifications');
+    WasteNoneLogger().d('print notifications');
     List<PendingNotificationRequest> existingNotifications =
         await flutterLocalNotificationsPlugin.pendingNotificationRequests();
     for (PendingNotificationRequest pendingNotification in existingNotifications) {
-      print('${pendingNotification.id}-${pendingNotification.body}');
+      WasteNoneLogger().d('${pendingNotification.id}-${pendingNotification.body}');
     }
-    print('end print notifications');
+    WasteNoneLogger().d('end print notifications');
   }
 }

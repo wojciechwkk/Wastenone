@@ -1,3 +1,7 @@
+import 'package:logger/logger.dart';
+
+import '../settings_window.dart';
+
 abstract class StringValidator {
   bool isValid(String value);
 }
@@ -49,8 +53,7 @@ class EmailAndPasswordStringValidator {
 class ProductQtyValueValidator implements StringValidator {
   @override
   bool isValid(String value) {
-    print(
-        "validator: $value is OK: ${value.isNotEmpty && num.parse(value) < 10000}");
+    WasteNoneLogger().d("validator: $value is OK: ${value.isNotEmpty && num.parse(value) < 10000}");
     return value.isNotEmpty && num.parse(value) < 10000;
   }
 }

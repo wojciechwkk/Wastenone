@@ -6,7 +6,7 @@ import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
 import 'fridge_page.dart';
-import 'log_in_page.dart';
+import 'log_in/log_in_page.dart';
 import 'models/user.dart';
 
 class LandingSemaphorePage extends StatelessWidget {
@@ -25,7 +25,7 @@ class LandingSemaphorePage extends StatelessWidget {
 //         stream: db.onDBCreateStateChange,
         stream: userStreamCtrl.stream,
         builder: (context, snapshot) {
-//          print(snapshot.connectionState);
+//          WasteNoneLogger().d(snapshot.connectionState);
           if (snapshot.connectionState == ConnectionState.active) {
             WasteNoneUser user = snapshot.data;
             if (user == null) {

@@ -77,7 +77,7 @@ class FridgeItem implements Comparable {
   int compareTo(other) {
     DateTime thisDate = new DateFormat("yyyy-MM-dd").parse(this.validDate);
     DateTime otherDate = new DateFormat("yyyy-MM-dd").parse(other.validDate);
-    // print(
+    // WasteNoneLogger().d(
     //     '${this.validDate}: ${thisDate.month}-${thisDate.day} compare to ${other.validDate}: ${otherDate.month}-${otherDate.day}');
     return thisDate.compareTo(otherDate);
   }

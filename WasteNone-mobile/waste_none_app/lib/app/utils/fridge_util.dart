@@ -20,10 +20,10 @@ FridgeItem getSimilarItemInFridge(List<FridgeItem> fridgeItemList, FridgeItem fr
 //     String encryptionPassword = await readEncryptionPassword(user.uid);
 //     fetchedFridgeItems = decryptFridgeList(fetchedEncryptedFridgeItems, encryptionPassword);
 //     if (fetchedFridgeItems == null) {
-//       // print("your fridge is empty");
+//       // WasteNoneLogger().d("your fridge is empty");
 //       return new List<FridgeItem>();
 //     } else {
-//       // print("theres ${fetchedFridgeItems?.length} items in this fridge");
+//       // WasteNoneLogger().d("theres ${fetchedFridgeItems?.length} items in this fridge");
 //       return fetchedFridgeItems;
 //     }
 //   }

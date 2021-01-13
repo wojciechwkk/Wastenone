@@ -47,6 +47,9 @@ dependencies:
   fluttertoast: ^7.1.6
   image_picker: ^0.6.7+17
   sembast: ^2.4.8+1
+  email_validator: ^1.0.6
+  logger: ^0.9.4
+  pull_to_refresh: ^1.6.3
 
 dev_dependencies:
   flutter_test:

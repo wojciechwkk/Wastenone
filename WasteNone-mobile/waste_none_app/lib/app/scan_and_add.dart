@@ -8,12 +8,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
+import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:waste_none_app/app/add_product.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/settings_window.dart';
 import 'package:waste_none_app/app/utils/fridge_util.dart';
+import 'package:waste_none_app/app/utils/toast_util.dart';
+import 'package:waste_none_app/common_widgets/item_qty_popup.dart';
 import 'package:waste_none_app/services/local_nosql_cache.dart';
 import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
@@ -23,6 +27,8 @@ import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 import 'package:waste_none_app/services/flutter_notification.dart';
 
+import 'fridge_page.dart';
+import 'fridge_page.dart';
 import 'models/fridge.dart';
 
 class ScanAndAdd extends StatefulWidget with ProductQtyValidator {
@@ -236,61 +242,72 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
 //---------------------------------- adding item -------------------------------
 
-  final TextEditingController _qtyTextController = TextEditingController();
+  // final TextEditingController _qtyTextController = TextEditingController();
+  //
+  // String get _qty => _qtyTextController.text.trim();
+  // bool _qtyChanged = false;
+  //
+  // void _qtyChangedState() {
+  //   setState(() {
+  //     _qtyChanged = true;
+  //   });
+  // }
 
-  String get _qty => _qtyTextController.text.trim();
-  bool _qtyChanged = false;
-
-  void _qtyChangedState() {
-    setState(() {
-      _qtyChanged = true;
-    });
-  }
-
+//   _showQtyDialog(BuildContext context) async {
+//     _qtyTextController.clear();
+//     _qtyChanged = false;
+//     await showDialog<String>(
+//         context: context,
+//         builder: (BuildContext context) {
+//           return AlertDialog(
+//             content: new Row(
+//               children: <Widget>[
+//                 Expanded(
+//                   child: TextFormField(
+//                     controller: _qtyTextController,
+//                     inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+//                     keyboardType: TextInputType.number,
+//                     autofocus: true,
+//                     decoration: new InputDecoration(
+//                       labelText: 'Add quantity',
+//                       enabled: true,
+//                       errorText: widget.qtyValidator.isValid(_qty) ? widget.qtyErrorText : null,
+//                     ),
+//                     onChanged: (qty) => _qtyChangedState,
+// //                    validator: () => ProductQtyValueVaidator();
+//                   ),
+//                 )
+//               ],
+//             ),
+//             actions: <Widget>[
+//               new FlatButton(
+//                   child: const Text('OK'),
+//                   onPressed: () {
+//                     _addItem();
+//                   }),
+//               new FlatButton(
+//                   child: const Text('Cancel'),
+//                   onPressed: () {
+//                     Navigator.pop(context);
+//                   }),
+//             ],
+//           );
+//         });
+//   }
   _showQtyDialog(BuildContext context) async {
-    _qtyTextController.clear();
-    _qtyChanged = false;
-    await showDialog<String>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            content: new Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextFormField(
-                    controller: _qtyTextController,
-                    inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                    keyboardType: TextInputType.number,
-                    autofocus: true,
-                    decoration: new InputDecoration(
-                      labelText: 'Add quantity',
-                      enabled: true,
-                      errorText: widget.qtyValidator.isValid(_qty) ? widget.qtyErrorText : null,
-                    ),
-                    onChanged: (qty) => _qtyChangedState,
-//                    validator: () => ProductQtyValueVaidator();
-                  ),
-                )
-              ],
-            ),
-            actions: <Widget>[
-              new FlatButton(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    _addItem();
-                  }),
-              new FlatButton(
-                  child: const Text('Cancel'),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  }),
-            ],
-          );
-        });
+    int addQty = await showDialog<int>(
+      context: context,
+      builder: (context) => ItemQtySelectionPopup(
+        titleText: 'Select quantity',
+        maxQty: 99,
+        defaultQty: 1,
+      ),
+    );
+    WasteNoneLogger().d('addQty: $addQty');
+    if (addQty != null) _addItem(addQty);
   }
 
-  _addItem() async {
-    String qty = _qtyTextController.text.toString();
+  _addItem(int qty) async {
     FridgeItem fridgeItem = await _prepareFridgeItem(qty);
     _addItemToFridgeAction(fridgeItem);
     Navigator.pop(context);
@@ -298,32 +315,33 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   _addItemToFridgeAction(FridgeItem fridgeItem) async {
     if (product != null) {
-      if (widget.qtyValidator.isValid(_qtyTextController.text)) {
-        if (fridgeItem != null && !fridgeItem.isEmpty()) {
-          FridgeItem existingSimilarItem = getSimilarItemInFridge(fridgeContent, fridgeItem);
-          if (existingSimilarItem != null) {
-            await _updateExistingItem(existingSimilarItem, fridgeItem);
-            print("item updated");
-          } else {
-            await _addNewItem(fridgeItem);
-            print("item added");
-            Map<String, dynamic> productJson = await getProductFromCacheByEANCode(fridgeItem.product_ean);
-            Product product = Product.fromMap(productJson);
-            if (product == null) product = await db.getProductByEanCode(fridgeItem.product_ean);
-            if (product != null) FlutterNotification().addExpiryNotification(auth.currentUser(), product, fridgeItem);
-          }
-          FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
-        }
-        if (mounted) {
-          setState(() {
-            productInfo = "";
-            _productImage = null;
-          });
-        }
-        selectedDate = defaultSelectedDate;
+      if (fridgeItem != null && !fridgeItem.isEmpty()) {
+        FridgeItem existingSimilarItem = getSimilarItemInFridge(fridgeContent, fridgeItem);
+        if (existingSimilarItem != null) {
+          await _updateExistingItem(existingSimilarItem, fridgeItem);
+          WasteNoneLogger().d("item updated");
+        } else {
+          await _addNewItem(fridgeItem);
+          Map<String, dynamic> productJson = await getProductFromCacheByEANCode(fridgeItem.product_ean);
+          Product product = Product.fromMap(productJson);
+          if (product == null) product = await db.getProductByEanCode(fridgeItem.product_ean);
+          if (product != null) FlutterNotification().addExpiryNotification(auth.currentUser(), product, fridgeItem);
 
-        _scanAction();
+          WasteNoneLogger().d("item added");
+        }
+        // FlutterNotification().showItemAddedNotification(fridge, product, fridgeItem);
+        String fridgeName = fridge.displayName != null ? ' ${fridge.displayName}' : '';
+        showGoodToast("Added ${product.name} to your fridge$fridgeName.");
       }
+      if (mounted) {
+        setState(() {
+          productInfo = "";
+          _productImage = null;
+        });
+      }
+      selectedDate = defaultSelectedDate;
+
+      _scanAction();
     }
   }
 
@@ -339,19 +357,19 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   Future<void> _addNewItem(FridgeItem fridgeItem) async {
     //db.addToFridge(fridgeItem, wasteNoneUser.uid);
-    String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
-    String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
+    // String encryptionPassword = await readEncryptionPassword(auth.currentUser().uid);
+    // String encryptedFridgeItem = fridgeItem.asEncodedString(encryptionPassword);
     // String dbKey = await db.addToFridgeEncrypted(encryptedFridgeItem, fridgeItem.fridge_id);
     String dbKey = await db.addToFridge(fridgeItem, user.uid);
     fridgeItem.dbKey = dbKey;
     fridgeContent.add(fridgeItem);
   }
 
-  Future<FridgeItem> _prepareFridgeItem(String qty) async {
+  Future<FridgeItem> _prepareFridgeItem(int qty) async {
     FridgeItem fridgeItem = FridgeItem();
     fridgeItem.fridge_id = fridge.fridgeID;
     fridgeItem.product_ean = product?.eanCode;
-    fridgeItem.qty = num.parse(qty);
+    fridgeItem.qty = qty;
     fridgeItem.validDate = "${selectedDate?.year}-${selectedDate?.month}-${selectedDate?.day}";
     fridgeItem.comment = "comment 1";
     return fridgeItem;
@@ -367,27 +385,27 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       autoEnableFlash: true,
     );
     var result = await BarcodeScanner.scan(options: options);
-    print(productInfo);
+    WasteNoneLogger().d(productInfo);
     var eanCode = result.rawContent.toString();
     return eanCode;
   }
 
   void _scanAction() async {
-    // String eanCode = await _scanBarCode();
-    String eanCode = exampleEanCodes[eanItemIndex];
-    eanItemIndex = eanItemIndex % exampleEanCodes.length;
+    String eanCode = await _scanBarCode();
+    // String eanCode = exampleEanCodes[eanItemIndex];
+    // eanItemIndex = eanItemIndex % exampleEanCodes.length;
 
     _loadingProductData = true;
 
     _productFetched = await _fetchFromLocalCache(eanCode);
-    print("product found in local cache: $_productFetched");
+    WasteNoneLogger().d("product found in local cache: $_productFetched");
 
     if (!_productFetched) {
       _productFetched = await _fetchFromWasteNoneDB(eanCode);
-      print("product found in WasteNone database: $_productFetched");
+      WasteNoneLogger().d("product found in WasteNone database: $_productFetched");
       if (!_productFetched) {
         _productFetched = await _lookUpInExtDB(eanCode);
-        print("product found in external database: $_productFetched");
+        WasteNoneLogger().d("product found in external database: $_productFetched");
 
         //add to the WasteNone database
         if (product != null) db.addProduct(product);
@@ -419,7 +437,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 //---------------------------------- WN DB -------------------------------------
 
   Future<bool> _fetchFromWasteNoneDB(String eanCode) async {
-    print("about to fetch product data from WasteNone DB");
+    WasteNoneLogger().d("about to fetch product data from WasteNone DB");
     Product productWNDB = await db?.getProductByEanCode(eanCode);
     if (productWNDB != null) {
       setState(() {
@@ -435,7 +453,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 //-------------------------------- PRODUCT DB ----------------------------------
 
   Future<bool> _lookUpInExtDB(String eanCode) async {
-    print("about to fetch product data from external DB");
+    WasteNoneLogger().d("about to fetch product data from external DB");
     final uri = "https://world.openfoodfacts.org/api/v0/product/";
     final uriWithEan = '$uri$eanCode.json';
 
@@ -444,11 +462,11 @@ class _ScanAndAddState extends State<ScanAndAdd> {
     final responseJson = json.decode(response.body);
     final productJson = responseJson["product"];
 
-    print(uriWithEan);
-    print(response.statusCode);
-    print(response.body);
+    WasteNoneLogger().d(uriWithEan);
+    WasteNoneLogger().d(response.statusCode);
+    WasteNoneLogger().d(response.body);
     if (response.statusCode == 200 && responseJson["status_verbose"] == 'product found') {
-      print(response.body);
+      WasteNoneLogger().d(response.body);
 
       Product productFromGs1 = Product(eanCode);
       productFromGs1.name = _getSomeProdNameFromResponse(productJson);
@@ -461,14 +479,14 @@ class _ScanAndAddState extends State<ScanAndAdd> {
       productFromGs1.size = productJson["quantity"] != null ? productJson["quantity"] : productJson["serving_size"];
       productFromGs1.type = null;
 
-      print("fetched from external db product: ${productJson["product_name"]}");
+      WasteNoneLogger().d("fetched from external db product: ${productJson["product_name"]}");
 
       setState(() {
         product = productFromGs1;
       });
       return true;
     } else {
-      print("Product not found :(");
+      WasteNoneLogger().d("Product not found :(");
       return false;
     }
   }
@@ -488,7 +506,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 //------------------------------- ADD NEW PRODUCT --------------------------------
 
   void _addNewProduct() async {
-    print('add new product manually');
+    WasteNoneLogger().d('add new product manually');
     Product newProduct = await Navigator.push(
         context,
         MaterialPageRoute(
@@ -496,11 +514,11 @@ class _ScanAndAddState extends State<ScanAndAdd> {
                   auth: auth,
                   db: db,
                   user: user,
-                  newProduct: product,
-                ))).whenComplete(() => {print('product added..')});
+                  newProduct: product != null ? product : Product(null),
+                ))).whenComplete(() => {WasteNoneLogger().d('product added..')});
     setState(() {
       product = newProduct;
-      if (newProduct.picPath != null) _productImage = ProductImage(newProduct: false, picFilePath: newProduct.picPath);
+      if (newProduct?.picPath != null) _productImage = ProductImage(newProduct: false, picFilePath: newProduct.picPath);
     });
     setProductInfo();
   }
@@ -509,26 +527,28 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   setProductInfo() {
     if (product != null) {
-      print("create product\n${product.name}");
+      WasteNoneLogger().d("create product\n${product.name}");
       var productInfoFromDB = ""; //""Productct info:\n ";
 
       if (product.brand != null) productInfoFromDB += "${product.brand}\n";
       if (product.name != null) productInfoFromDB += "  ${product.name}";
       if (product.size != null) productInfoFromDB += " \n  ${product.size}";
 
-      setState(() {
-        productInfo = productInfoFromDB;
-        _productImage = ProductImage(newProduct: false, picLink: product.picLink, picFilePath: product.picPath);
-        _productFetched = true;
-      });
+      if (mounted)
+        setState(() {
+          productInfo = productInfoFromDB;
+          _productImage = ProductImage(newProduct: false, picLink: product.picLink, picFilePath: product.picPath);
+          _productFetched = true;
+        });
     }
   }
 
   _showNotFoundMsg(String eanCode) {
-    print("product not found :(");
-    setState(() {
-      productInfo = "Product not found :(";
-      product = Product(eanCode);
-    });
+    WasteNoneLogger().d("product not found :(");
+    if (mounted)
+      setState(() {
+        productInfo = "Product not found :(";
+        product = Product(eanCode);
+      });
   }
 }

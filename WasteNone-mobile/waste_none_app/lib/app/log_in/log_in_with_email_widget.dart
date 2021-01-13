@@ -1,18 +1,25 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:logger/logger.dart';
 import 'package:waste_none_app/app/log_in/social_log_in_button.dart';
 import 'package:waste_none_app/app/models/user.dart';
+import 'package:waste_none_app/app/utils/toast_util.dart';
 import 'package:waste_none_app/services/secure_storage.dart';
 import 'package:waste_none_app/app/utils/validators.dart';
 import 'package:waste_none_app/common_widgets/form_submit_button.dart';
 import 'package:waste_none_app/services/base_classes.dart';
 import 'package:waste_none_app/services/firebase_database.dart';
 
+import '../settings_window.dart';
+
 enum LogInWithEmailFormType { logIn, createUser }
 
-class LogInWithEmailForm extends StatefulWidget with EmailAndPasswordStringValidator {
-  LogInWithEmailForm({@required this.auth, @required this.db, @required this.userStreamCtrl});
+class LogInWithEmailOrGoogleForm extends StatefulWidget with EmailAndPasswordStringValidator {
+  LogInWithEmailOrGoogleForm({@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
@@ -20,11 +27,11 @@ class LogInWithEmailForm extends StatefulWidget with EmailAndPasswordStringValid
 
   @override
   State<StatefulWidget> createState() =>
-      new _LogInWithEmailFormState(auth: auth, db: db, userStreamCtrl: userStreamCtrl);
+      new _LogInWithEmailOrGoogleFormState(auth: auth, db: db, userStreamCtrl: userStreamCtrl);
 }
 
-class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
-  _LogInWithEmailFormState({@required this.auth, @required this.db, @required this.userStreamCtrl});
+class _LogInWithEmailOrGoogleFormState extends State<LogInWithEmailOrGoogleForm> {
+  _LogInWithEmailOrGoogleFormState({@required this.auth, @required this.db, @required this.userStreamCtrl});
 
   final AuthBase auth;
   final WNFirebaseDB db;
@@ -53,7 +60,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
   bool _isDisplayNameEdited = false;
 
   void _submit() async {
-    print('submit called');
+    WasteNoneLogger().d('submit called');
     setState(() {
 //      _submitted = true;
       _isLoading = true;
@@ -61,11 +68,13 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
     try {
       if (widget.emailValidator.isValid(_email) && widget.passwordValidator.isValid(_password)) {
         if (_formType == LogInWithEmailFormType.logIn) {
-          auth.logInWithEmailAndPassword(_email, _password);
+          WasteNoneUser user = await auth.logInWithEmailAndPassword(_email, _password);
+          userStreamCtrl.sink.add(user);
         } else {
           if (widget.displayNameValidator.isValid(_displayName)) {
-            print('fb.about to create email account: $_email for $_displayName');
+            WasteNoneLogger().d('fb.about to create email account: $_email for $_displayName');
             WasteNoneUser firebaseUser = await auth.createUser(_email, _password, _displayName);
+
             if (firebaseUser != null) {
               firebaseUser.displayName = _displayName;
 
@@ -74,7 +83,7 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
               String defaultFridgeID = await db.createDefaultFridge(firebaseUser.uid);
               firebaseUser.addFridgeID(defaultFridgeID);
 
-              String encodedUserData = firebaseUser.asEncodedString(encrPassword);
+              // String encodedUserData = firebaseUser.asEncodedString(encrPassword);
               await db.createUser(firebaseUser);
               userStreamCtrl.sink.add(firebaseUser);
             }
@@ -82,9 +91,24 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
           }
         }
       }
-    } catch (e) {
-      print(e.toString());
+    } catch (signUpError) {
+      WasteNoneLogger().d(signUpError);
+      if (signUpError is FirebaseAuthException) {
+        if (signUpError.code == 'email-already-in-use') {
+          WasteNoneLogger().d('User exists!');
+          setState(() {
+            _isLoading = false;
+          });
+
+          _passwordController.clear();
+          showShortBadToast("User already exists, please log in.");
+        }
+      }
     } finally {}
+  }
+
+  Future<bool> _userExistsInWNDB() async {
+    return await db.getUserByEmail(_email) != null;
   }
 
   void _updateState() {
@@ -103,8 +127,9 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
       _isDisplayNameEdited = false;
       _formType =
           _formType == LogInWithEmailFormType.logIn ? LogInWithEmailFormType.createUser : LogInWithEmailFormType.logIn;
+      _isLoading = false;
     });
-//    _emailController.clear();
+    _displayNameController.clear();
     _emailController.clear();
     _passwordController.clear();
   }
@@ -169,6 +194,12 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
         Container(
             color: Colors.white,
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              Visibility(
+                visible: _formType == LogInWithEmailFormType.createUser,
+                child: SizedBox(
+                  height: 50.0,
+                ),
+              ),
               Visibility(
                 visible: _formType == LogInWithEmailFormType.createUser,
                 child: Padding(
@@ -257,12 +288,12 @@ class _LogInWithEmailFormState extends State<LogInWithEmailForm> {
 
   Future<void> _logInWithGoogle() async {
     try {
-      print('Logging in with google.');
+      WasteNoneLogger().d('Logging in with google.');
       WasteNoneUser user = await auth.logInWihGoogle();
-      print('logged in user: ${user.toJson()}');
+      WasteNoneLogger().d('logged in user: ${user.toJson()}');
       await _createUserIfFirstLogon(user);
     } catch (e) {
-      print(e.toString());
+      WasteNoneLogger().d(e.toString());
     }
   }
 
