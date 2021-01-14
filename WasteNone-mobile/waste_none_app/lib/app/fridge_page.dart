@@ -21,6 +21,8 @@ import 'package:waste_none_app/app/utils/cryptography_util.dart';
 import 'package:waste_none_app/app/utils/fridge_util.dart';
 import 'package:waste_none_app/app/utils/settings_util.dart';
 import 'package:waste_none_app/app/utils/toast_util.dart';
+import 'package:waste_none_app/common_widgets/confirmation_popup.dart';
+import 'package:waste_none_app/common_widgets/input_string.dart';
 import 'package:waste_none_app/common_widgets/item_qty_popup.dart';
 import 'package:waste_none_app/services/local_nosql_cache.dart';
 import 'package:waste_none_app/services/secure_storage.dart';
@@ -60,6 +62,7 @@ class FridgePageState extends State<FridgePage> {
   List<Fridge> _usersFridges;
   Fridge _currentFridge;
   WasteNoneUser _sharedBy;
+  bool _ownFridge;
 
   int fridgeItemCount;
   List<FridgeItem> _usersCurrentFridgeItems;
@@ -147,7 +150,8 @@ class FridgePageState extends State<FridgePage> {
         products[fetchedFridgeItem?.product_ean] = product;
       }
     }
-    // WasteNoneLogger().d('fetched');
+    _setSharedOwner();
+
     if (mounted) {
       setState(() {
         fetchedFridgeItems.sort();
@@ -168,35 +172,58 @@ class FridgePageState extends State<FridgePage> {
         WasteNoneLogger().d(invite.toJson());
         WasteNoneUser user = await db.getUserData(invite.senderUID);
         if (user != null) {
-          bool accepted =
-              await Navigator.push(context, MaterialPageRoute(builder: (context) => ShareFridgeInvitePopup(user)));
+          String title = 'Fridge shared';
+          String msg = "You have invitation from user ${user.displayName} to share a fridge. \nDo you want to accept?";
+          bool accepted = await Navigator.push(
+              context, MaterialPageRoute(builder: (context) => ConfirmationPopup(title: title, msg: msg)));
           if (accepted) {
-            Fridge newSharedFridge = await db.getFridge(invite.fridgeID);
-            _addFridgeForUser(newSharedFridge);
+            await _acceptShareInvite(invite);
           }
+
           await db.removeShareFridgeInvite(invite);
         }
       }
     }
   }
+
+  Future _acceptShareInvite(ShareFridgeInvite invite) async {
+    Fridge newSharedFridge = await db.getFridge(invite.fridgeID);
+    _addFridgeForUser(newSharedFridge);
+    _addUserToFridgeSharedToInfo(newSharedFridge);
+  }
+
+  Future _addUserToFridgeSharedToInfo(Fridge fridge) async {
+    fridge.addSharedTo(user.uid);
+    _currentFridge = fridge;
+    await db.updateFridge(fridge);
+  }
   //---------------------------- /initial load data --------------------------------------------------------------------
 
   //---------------------------- flutter widgets -----------------------------------------------------------------------
 
-  String buildFridgeLabel() {
+  String _buildFridgeLabel() {
     String fridgeLabel = '';
 
     if (_currentFridge != null && user != null) {
-      if (_isSomeonesSharedFridge()) {
-        if (_sharedBy != null && _sharedBy.displayName != null) {
-          String sharedByLabelPart;
-          if (_sharedBy.displayName.contains(" "))
-            sharedByLabelPart =
-                '${_sharedBy.displayName.split(" ").first} ${_sharedBy.displayName.split(" ")[1].substring(0, 2)}';
-          else
-            sharedByLabelPart =
-                _sharedBy.displayName.length > 20 ? _sharedBy.displayName.substring(0, 25) : _sharedBy.displayName;
-          fridgeLabel = '[$sharedByLabelPart] ';
+      if (_isExternalFridge()) {
+        if (_sharedBy != null) {
+          // print(
+          //     'isExternal: ${_currentFridge.fridgeID} starts with: ${user.uid} so: ${!_currentFridge.fridgeID.startsWith(user.uid)}');
+          // print('_sharedBy ${_sharedBy.displayName}');
+          if (_sharedBy != null && _sharedBy.displayName != null) {
+            String sharedByLabelPart;
+            if (_sharedBy.displayName.contains(" "))
+              sharedByLabelPart =
+                  '${_sharedBy.displayName.split(" ").first} ${_sharedBy.displayName.split(" ")[1].substring(0, 2)}';
+            else
+              sharedByLabelPart =
+                  _sharedBy.displayName.length > 20 ? _sharedBy.displayName.substring(0, 20) : _sharedBy.displayName;
+            fridgeLabel = '[$sharedByLabelPart] ';
+          }
+        }
+      } else {
+        if (_currentFridge.getSharedToIDs().length > 0) {
+          fridgeLabel = '[shared] ';
         }
       }
       var indexOfFridge = _usersFridges?.indexOf(_currentFridge);
@@ -211,7 +238,7 @@ class FridgePageState extends State<FridgePage> {
     return "";
   }
 
-  bool _isSomeonesSharedFridge() {
+  bool _isExternalFridge() {
     return !_currentFridge.fridgeID.startsWith(user.uid);
   }
 
@@ -219,7 +246,7 @@ class FridgePageState extends State<FridgePage> {
   Widget build(BuildContext context) {
     Widget loadingIndicator = _loadingUserData ? LoadingIndicator() : Container();
 
-    final fridgeLabel = buildFridgeLabel();
+    final fridgeLabel = _buildFridgeLabel();
 
     return FutureBuilder(
       future: this.initUserData(),
@@ -371,12 +398,14 @@ class FridgePageState extends State<FridgePage> {
                 color: Colors.green,
                 icon: Icons.add_box,
                 onTap: () => _addNewFridge(),
+                closeOnTap: true,
               ),
               IconSlideAction(
                 caption: 'Edit label',
                 color: Colors.indigo,
                 icon: Icons.edit,
                 onTap: () => _showEditFridgeLabelPopup(context),
+                closeOnTap: true,
               ),
             ],
             secondaryActions: <Widget>[
@@ -385,12 +414,14 @@ class FridgePageState extends State<FridgePage> {
                 color: Colors.blue,
                 icon: Icons.share_outlined,
                 onTap: _shareFridgeAction,
+                closeOnTap: true,
               ),
               IconSlideAction(
                 caption: 'Delete fridge',
                 color: Colors.red,
                 icon: Icons.delete,
                 onTap: _deleteFridge,
+                closeOnTap: true,
               ),
             ],
           ),
@@ -403,22 +434,36 @@ class FridgePageState extends State<FridgePage> {
     if (user.isAnonymous())
       showShortBadToast("Only for logged in users!");
     else {
-      String email = await showDialog<String>(
-        context: context,
-        builder: (context) => ShareFridgeEmailInputPopup(),
-      );
-      if (email != null) {
-        WasteNoneLogger().d('share fridge with: $email');
-        WasteNoneUser receiveUser = await db.getUserByEmail(email);
-        if (receiveUser == null) {
-          showLongBadToast("Whops! There is no WasteNone user with this email (but we all know there should! ;))");
-        } else {
-          bool inviteAlreadyExists = await _inviteExists(receiveUser);
-          if (inviteAlreadyExists)
-            showShortBadToast("This invitation already exists.");
-          else {
-            _sendShareInvite(receiveUser);
-            showGoodToast("Invitation sent to user: $email");
+      if (!_ownFridge) {
+        showShortBadToast("You can't share a fridge that was shared to you.");
+      } else {
+        if (_currentFridge.displayName == null) {
+          String title = 'Fridge has no label. Please set one before sharing.';
+          String displayName = await showDialog<String>(
+            context: context,
+            builder: (context) => InputStringPopup(title: title),
+          );
+          if (displayName != null) {
+            _editFridgeLabel(displayName);
+          }
+        }
+        String email = await showDialog<String>(
+          context: context,
+          builder: (context) => ShareFridgeEmailInputPopup(),
+        );
+        if (email != null) {
+          WasteNoneLogger().d('share fridge with: $email');
+          WasteNoneUser receiveUser = await db.getUserByEmail(email);
+          if (receiveUser == null) {
+            showLongBadToast("Whops! There is no WasteNone user with this email (but we all know there should! ;))");
+          } else {
+            bool inviteAlreadyExists = await _inviteExists(receiveUser);
+            if (inviteAlreadyExists)
+              showShortBadToast("This invitation already exists.");
+            else {
+              _sendShareInvite(receiveUser);
+              showGoodToast("Invitation sent to user: $email");
+            }
           }
         }
       }
@@ -481,18 +526,29 @@ class FridgePageState extends State<FridgePage> {
   }
 
   _showFridge(String fridgeID) async {
-    var fridgeOwner = _currentFridge.fridgeID.substring(0, 28);
-    WasteNoneUser sharingUser;
-    if (fridgeOwner != user.uid) sharingUser = await db.getUserData(fridgeOwner);
-
+    await _setSharedOwner();
     if (mounted) {
       WasteNoneLogger().d('show user fridge ID. $fridgeID');
       setState(() {
         _currentFridge = _usersFridges.firstWhere((element) => element.fridgeID == fridgeID);
-        _sharedBy = sharingUser;
+
         _fetchUserFridgeData();
       });
     }
+  }
+
+  _setSharedOwner() async {
+    var fridgeOwner = _currentFridge.fridgeID.substring(0, 28);
+    WasteNoneUser sharingUser;
+    if (fridgeOwner != user.uid) {
+      _ownFridge = false;
+      sharingUser = await db.getUserData(fridgeOwner);
+    } else
+      _ownFridge = true;
+    if (mounted)
+      setState(() {
+        _sharedBy = sharingUser;
+      });
   }
 
   final TextEditingController _fridgeLabelTextController = TextEditingController();
@@ -549,6 +605,7 @@ class FridgePageState extends State<FridgePage> {
     _currentFridge.displayName = newFridgeLabel;
     WasteNoneLogger().d('${_currentFridge.fridgeID} change label to $newFridgeLabel');
     await db.updateFridge(_currentFridge);
+    print('_currentFridge - ${_currentFridge.toJson()}');
     // user.sortFridgeList();
     _usersFridges.firstWhere((element) => element.fridgeID == _currentFridge.fridgeID).displayName = newFridgeLabel;
     _refreshCurrentFridge();
@@ -593,24 +650,64 @@ class FridgePageState extends State<FridgePage> {
   Future<void> _deleteFridge() async {
     if (_firstDeletePress) {
       _firstDeletePress = false;
-      WasteNoneLogger().d('delete fridge ${_currentFridge.fridgeID}');
-      var currentIndex = _usersFridges.indexOf(_currentFridge);
-      if (_usersFridges.length == 1) {
-        db.emptyFridge(_currentFridge.fridgeID);
-        _showFridge(_currentFridge.fridgeID);
+      if (_isExternalFridge()) {
+        String title = 'Disconnect fridge';
+        String msg = "Do you want to disconnect from the shared fridge?";
+        bool disconnect = await Navigator.push(
+            context, MaterialPageRoute(builder: (context) => ConfirmationPopup(title: title, msg: msg)));
+        if (disconnect) {
+          _disconnectFromSharedFridge();
+        }
       } else {
-        db.deleteFridge(_currentFridge.fridgeID);
-        user.removeFridgeID(_currentFridge.fridgeID);
-        db.updateUser(user);
+        String title = 'Delete fridge';
+        String name = _currentFridge.displayName != null ? _currentFridge.displayName : _currentFridge.fridgeNo;
+        String msg = 'Do you want to remove fridge: $name';
+        bool accepted = await Navigator.push(
+            context, MaterialPageRoute(builder: (context) => ConfirmationPopup(title: title, msg: msg)));
+        if (accepted) {
+          WasteNoneLogger().d('delete fridge ${_currentFridge.fridgeID}');
+          var currentIndex = _usersFridges.indexOf(_currentFridge);
+          //remove fridge from all the users it's shared to
+          List<dynamic> sharedToUIDs = _currentFridge.getSharedToIDs();
+          for (String sharedToUID in sharedToUIDs) {
+            WasteNoneUser sharedToUser = await db.getUserData(sharedToUID);
+            sharedToUser.removeFridgeID(_currentFridge.fridgeID);
+            db.updateUser(sharedToUser);
+          }
+          //if it's the only one just empty it out
+          if (_usersFridges.length == 1) {
+            await db.emptyFridge(_currentFridge.fridgeID);
+            _currentFridge.displayName = null;
+            _currentFridge.removeAllSharing();
+            await db.updateFridge(_currentFridge);
+          } else {
+            //acutally delete it
+            db.deleteFridge(_currentFridge.fridgeID);
+            user.removeFridgeID(_currentFridge.fridgeID);
+            db.updateUser(user);
 
-        _usersFridges.removeWhere((element) => element.fridgeID == _currentFridge.fridgeID);
-        _sortUserFridges();
-        //if we delete first one, show next, if we delete any other show previous
-        int nextToShowIndex = currentIndex == 0 ? 0 : currentIndex - 1;
-        _showFridge(_usersFridges[nextToShowIndex].fridgeID);
+            _usersFridges.removeWhere((element) => element.fridgeID == _currentFridge.fridgeID);
+            _sortUserFridges();
+            //if we delete first one, show next, if we delete any other show previous
+            int nextToShowIndex = currentIndex == 0 ? 0 : currentIndex - 1;
+            _showFridge(_usersFridges[nextToShowIndex].fridgeID);
+          }
+        }
       }
       _firstDeletePress = true;
     }
+  }
+
+  _disconnectFromSharedFridge() {
+    _showNextFridge();
+    user.removeFridgeID(_currentFridge.fridgeID);
+    if (mounted)
+      setState(() {
+        _currentFridge.removeSharedTo(user.uid);
+        _usersFridges.remove(_currentFridge);
+      });
+    db.updateUser(user);
+    db.updateFridge(_currentFridge);
   }
 
   Widget _sliderFridgeItemWidget(
@@ -651,12 +748,14 @@ class FridgePageState extends State<FridgePage> {
           color: Colors.blue,
           icon: Icons.date_range,
           onTap: () => _showChangeDateDialog(context, index),
+          closeOnTap: true,
         ),
         IconSlideAction(
           caption: 'Change qty',
           color: Colors.indigo,
           icon: Icons.content_cut,
           onTap: () => _changeItemQty(context, index),
+          closeOnTap: true,
         ),
       ],
       secondaryActions: <Widget>[
@@ -665,12 +764,14 @@ class FridgePageState extends State<FridgePage> {
           color: Colors.green,
           icon: Icons.call_split,
           onTap: () => _moveToAnotherFridge(index, context),
+          closeOnTap: true,
         ),
         IconSlideAction(
           caption: 'Delete',
           color: Colors.red,
           icon: Icons.delete,
           onTap: () => _deleteFridgeItem(index),
+          closeOnTap: true,
         ),
       ],
     );
@@ -1047,57 +1148,6 @@ class ShareFridgeEmailInputPopupState extends State<ShareFridgeEmailInputPopup> 
   }
 }
 
-class ShareFridgeInvitePopup extends StatefulWidget {
-  ShareFridgeInvitePopup(this.sender);
-
-  final WasteNoneUser sender;
-
-  @override
-  State<StatefulWidget> createState() {
-    return ShareFridgeInvitePopupState(sender);
-  }
-}
-
-class ShareFridgeInvitePopupState extends State<ShareFridgeInvitePopup> {
-  ShareFridgeInvitePopupState(this.sender) {}
-
-  WasteNoneUser sender;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Fridge shared'),
-      content: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: 80,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Container(
-                width: 220,
-                child: Text(
-                    'You have invitation from user ${sender?.displayName} to share a fridge. \nDo you want to accept?'),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: <Widget>[
-        FlatButton(
-            child: const Text('YES'),
-            onPressed: () {
-              Navigator.of(context).pop(true);
-            }),
-        FlatButton(
-            child: const Text('NO'),
-            onPressed: () {
-              Navigator.of(context).pop(false);
-            }),
-      ],
-    );
-  }
-}
 //---------------------------- /share fridge ---------------------------------------------------------------------------
 
 //---------------------------- move fridge item ------------------------------------------------------------------------

@@ -22,7 +22,7 @@ class ItemQtySelectionPopupState extends State<ItemQtySelectionPopup> {
     print('moveQty $moveQty defaultQty $defaultQty  maxQty $maxQty');
   }
 
-  final String titleText; //'Select quantity to move'
+  final String titleText;
   final int maxQty;
   final int defaultQty;
 
@@ -67,7 +67,7 @@ class ItemQtySelectionPopupState extends State<ItemQtySelectionPopup> {
                   moveQtyController.text = moveQty.toString();
                 });
               },
-              label: '${moveQty.toString()}',
+              // label: '${moveQty.toString()}',
             ),
           ],
         ),

@@ -11,20 +11,23 @@ class Fridge extends Comparable {
   int fridgeNo;
   String displayName;
   String otherUsers;
+  List<dynamic> sharedToIDs;
 
   Fridge.fromSnapshot(DataSnapshot snapshot)
       : dbKey = snapshot.key,
         fridgeID = snapshot.value["fridgeID"],
         fridgeNo = snapshot.value["fridgeNo"],
         displayName = snapshot.value["displayName"],
-        otherUsers = snapshot.value["otherUsers"];
+        otherUsers = snapshot.value["otherUsers"],
+        sharedToIDs = snapshot.value["sharedToIDs"] != null ? snapshot.value["sharedToIDs"] : List<dynamic>();
 
   Fridge.fromMap(String key, LinkedHashMap<dynamic, dynamic> valueMap)
       : dbKey = key,
         fridgeID = valueMap["fridgeID"],
         fridgeNo = valueMap["fridgeNo"],
         displayName = valueMap["displayName"],
-        otherUsers = valueMap["otherUsers"];
+        otherUsers = valueMap["otherUsers"],
+        sharedToIDs = valueMap["sharedToIDs"] != null ? valueMap["sharedToIDs"] : List<dynamic>();
 
   Map<String, dynamic> get map {
     return {
@@ -33,6 +36,7 @@ class Fridge extends Comparable {
       "fridgeNo": fridgeNo,
       "displayName": displayName,
       "otherUsers": otherUsers,
+      "sharedToIDs": sharedToIDs,
     };
   }
 
@@ -43,6 +47,7 @@ class Fridge extends Comparable {
       "fridgeNo": fridgeNo,
       "displayName": displayName,
       "otherUsers": otherUsers,
+      "sharedToIDs": sharedToIDs,
     };
   }
 
@@ -65,4 +70,36 @@ class Fridge extends Comparable {
 
   @override
   int get hashCode => fridgeID.hashCode;
+
+  addSharedTo(String userUID) {
+    if (sharedToIDs == null) {
+      sharedToIDs = List<dynamic>();
+      sharedToIDs.add(userUID);
+    } else {
+      var _newUserUID = new List<dynamic>(sharedToIDs.length + 1);
+      int fridgeArrayIndex = 0;
+      sharedToIDs.forEach((oldUsersUID) {
+        _newUserUID[fridgeArrayIndex++] = oldUsersUID;
+      });
+      _newUserUID[fridgeArrayIndex] = userUID;
+      sharedToIDs = _newUserUID;
+    }
+  }
+
+  removeSharedTo(String userUID) {
+    var newSharedToList = List<dynamic>();
+    sharedToIDs.forEach((e) => print(e));
+    sharedToIDs.forEach((sharedToUser) {
+      if (sharedToUser != userUID) newSharedToList.add(sharedToUser);
+    });
+    sharedToIDs = newSharedToList;
+  }
+
+  List<dynamic> getSharedToIDs() {
+    return sharedToIDs != null ? sharedToIDs : new List<dynamic>();
+  }
+
+  removeAllSharing() {
+    sharedToIDs = new List<dynamic>();
+  }
 }

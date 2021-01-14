@@ -21,16 +21,17 @@ class LogInPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildContent(),
+      body: _buildContent(context),
     );
   }
 
   bool _LogAnonFirstPressed = true;
-  SingleChildScrollView _buildContent() {
+  SingleChildScrollView _buildContent(BuildContext context) {
     return SingleChildScrollView(
       child: Container(
         color: Colors.white,
-        padding: EdgeInsets.all(50),
+        height: MediaQuery.of(context).size.height,
+        padding: EdgeInsets.only(top: 30, left: 50, right: 50),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.center,
