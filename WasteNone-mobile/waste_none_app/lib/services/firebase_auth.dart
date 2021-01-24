@@ -14,6 +14,12 @@ class WNFirebaseAuth implements AuthBase {
     return (user == null) ? null : new WasteNoneUser(user.uid, user.displayName, user.email);
   }
 
+  WasteNoneUser userListenerUpdated() {
+    _firebaseAuth.authStateChanges().listen((User user) {
+      return _userFromFirebase(user);
+    });
+    return null;
+  }
   // @override
   // Stream<WasteNoneUser> get onAuthStateChange {
   //   return _firebaseAuth.onAuthStateChanged.map(_userFromFirebase);

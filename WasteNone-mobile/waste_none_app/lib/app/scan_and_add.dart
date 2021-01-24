@@ -309,8 +309,9 @@ class _ScanAndAddState extends State<ScanAndAdd> {
 
   _addItem(int qty) async {
     FridgeItem fridgeItem = await _prepareFridgeItem(qty);
-    _addItemToFridgeAction(fridgeItem);
+    await _addItemToFridgeAction(fridgeItem);
     Navigator.pop(context);
+    _scanAction();
   }
 
   _addItemToFridgeAction(FridgeItem fridgeItem) async {
@@ -340,8 +341,6 @@ class _ScanAndAddState extends State<ScanAndAdd> {
         });
       }
       selectedDate = defaultSelectedDate;
-
-      _scanAction();
     }
   }
 
@@ -427,6 +426,7 @@ class _ScanAndAddState extends State<ScanAndAdd> {
   Future<bool> _fetchFromLocalCache(String eanCode) async {
     var productJson = await getProductFromCacheByEANCode(eanCode);
     if (productJson != null) {
+      // if (mounted)
       setState(() {
         product = Product.fromMap(productJson);
       });

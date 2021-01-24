@@ -10,7 +10,10 @@ import 'log_in/log_in_page.dart';
 import 'models/user.dart';
 
 class LandingSemaphorePage extends StatelessWidget {
-  LandingSemaphorePage({@required this.auth, @required this.db});
+  LandingSemaphorePage({@required this.auth, @required this.db}) {
+    WasteNoneUser user = auth.userListenerUpdated();
+    userStreamCtrl.sink.add(user);
+  }
 
   final AuthBase auth;
   final WNFirebaseDB db;
@@ -19,7 +22,7 @@ class LandingSemaphorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    userStreamCtrl.sink.add(null);
+    userStreamCtrl.sink.add(auth.currentUser());
     return StreamBuilder<WasteNoneUser>(
 //        stream: auth.onAuthStateChange,
 //         stream: db.onDBCreateStateChange,

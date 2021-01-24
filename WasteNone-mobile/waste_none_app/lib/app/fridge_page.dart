@@ -71,7 +71,7 @@ class FridgePageState extends State<FridgePage> {
 
   String welcomeText = "WasteNone";
   String exampleText;
-  DateTime _notifyDate;
+  DateTime _usersNotifyDate;
 
   //---------------------------- initial load data ---------------------------------------------------------------------
   @override
@@ -134,7 +134,7 @@ class FridgePageState extends State<FridgePage> {
   }
 
   DateTime _setNotifyDate() {
-    double _notifyAtForWidget = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid), 8);
+    // double _notifyAtForWidget = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid), 8);
     double _notifyDaysBefore = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_DAYS, user.uid), 2);
     DateTime notifyDateWithTime = DateTime.now().add(Duration(days: _notifyDaysBefore.toInt()));
     return DateTime(notifyDateWithTime.year, notifyDateWithTime.month, notifyDateWithTime.day);
@@ -159,7 +159,7 @@ class FridgePageState extends State<FridgePage> {
         fridgeItemCount = _usersCurrentFridgeItems?.length;
         usersCurrentProducts = products;
         _loadingUserData = false;
-        _notifyDate = _setNotifyDate();
+        _usersNotifyDate = _setNotifyDate();
       });
     }
   }
@@ -785,7 +785,7 @@ class FridgePageState extends State<FridgePage> {
         ? Colors.lightGreen[300]
         : nowDate == itemDate
             ? Colors.red[300]
-            : _notifyDate.compareTo(itemDate) <= 0
+            : _usersNotifyDate.compareTo(itemDate) <= 0
                 ? Colors.white
                 : Colors.red[200];
   }

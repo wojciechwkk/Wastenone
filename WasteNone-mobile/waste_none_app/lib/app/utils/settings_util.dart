@@ -8,7 +8,7 @@ import 'package:waste_none_app/services/secure_storage.dart';
 
 enum TimeFormatEnum { ampm, a24h }
 enum SystemOfUnits { metric, imperial }
-enum SettingsKeysEnum { TIME_FORMAT, AM_PM, NOTIFY_EXPIRY_DAYS, NOTIFY_EXPIRY_HRS, UNIT_SYSTEM }
+enum SettingsKeysEnum { TIME_FORMAT, AM_PM, NOTIFY_EXPIRY_DAYS, NOTIFY_EXPIRY_HRS, NOTIFY_EXPIRY_MIN, UNIT_SYSTEM }
 
 String getSettingsKey(SettingsKeysEnum settingsKeyEnum, String userUid) {
   switch (settingsKeyEnum) {
@@ -23,6 +23,9 @@ String getSettingsKey(SettingsKeysEnum settingsKeyEnum, String userUid) {
       break;
     case SettingsKeysEnum.NOTIFY_EXPIRY_HRS:
       return '$userUid-expiry-notify-hours';
+      break;
+    case SettingsKeysEnum.NOTIFY_EXPIRY_MIN:
+      return '$userUid-expiry-notify-minutes';
       break;
     case SettingsKeysEnum.UNIT_SYSTEM:
       return '$userUid-unit-system';

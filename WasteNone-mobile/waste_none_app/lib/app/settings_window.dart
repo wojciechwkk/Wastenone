@@ -40,12 +40,14 @@ class _SettingsWindowState extends State<SettingsWindow> {
   String IS_12H_KEY;
   String EXPIRE_NOTIFY_DAYS_KEY;
   String EXPIRE_NOTIFY_HRS_KEY;
+  String EXPIRE_NOTIFY_MIN_KEY;
   String METRIC_SYSTEM_KEY;
 
   bool _is24hrsFormat;
   String _ampmForWidget;
   double _notifyDaysBefore;
   double _notifyAtForWidget;
+  double _notifyAtMinForWidget;
   double _maxNotifyTimeScale;
   bool _isSystemMetric;
   String _metricSystem;
@@ -62,6 +64,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
       _notifyDaysBefore = Settings.getValue(this.EXPIRE_NOTIFY_DAYS_KEY, 2);
       double notifAt = Settings.getValue(this.EXPIRE_NOTIFY_HRS_KEY, 8);
       _notifyAtForWidget = _is24hrsFormat ? notifAt : notifAt % 12;
+      _notifyAtMinForWidget = Settings.getValue(this.EXPIRE_NOTIFY_MIN_KEY, 0);
       // print('w: $_notifyAtForWidget max: $_maxNotifyTimeScale ampm: $_ampmForWidget');
     });
   }
@@ -71,6 +74,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
     IS_12H_KEY = getSettingsKey(SettingsKeysEnum.AM_PM, user.uid);
     EXPIRE_NOTIFY_DAYS_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_DAYS, user.uid);
     EXPIRE_NOTIFY_HRS_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid);
+    EXPIRE_NOTIFY_MIN_KEY = getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_MIN, user.uid);
     METRIC_SYSTEM_KEY = getSettingsKey(SettingsKeysEnum.UNIT_SYSTEM, user.uid);
   }
 
@@ -156,7 +160,7 @@ class _SettingsWindowState extends State<SettingsWindow> {
                             min: 0.0,
                             max: _maxNotifyTimeScale,
                             step: 1,
-                            leading: Icon(Icons.access_time_sharp),
+                            leading: Icon(Icons.timer),
                             presetValue: _notifyAtForWidget,
                             onChange: (value) {
                               setState(() {
@@ -164,6 +168,22 @@ class _SettingsWindowState extends State<SettingsWindow> {
                               });
                             },
                             subtitle: '${_formatTime(_notifyAtForWidget.toInt())}',
+                          ),
+                          NotifyTimeSliderSettingsTile(
+                            title: 'minutes:',
+                            settingKey: this.EXPIRE_NOTIFY_MIN_KEY,
+                            defaultValue: 0.0,
+                            min: 0.0,
+                            max: 59.0,
+                            step: 1,
+                            leading: Icon(Icons.access_time_sharp),
+                            presetValue: _notifyAtMinForWidget,
+                            onChange: (value) {
+                              setState(() {
+                                _notifyAtMinForWidget = value;
+                              });
+                            },
+                            subtitle: _notifyAtMinForWidget.toInt().toString(),
                           ),
                         ],
                       ),

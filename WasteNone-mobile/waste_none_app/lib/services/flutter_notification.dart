@@ -1,8 +1,10 @@
-import 'package:flutter/cupertino.dart';
+import 'package:date_util/date_util.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:logger/logger.dart';
+import 'package:waste_none_app/app/fridge_page.dart';
 import 'package:waste_none_app/app/models/fridge.dart';
 import 'package:waste_none_app/app/models/fridge_item.dart';
 import 'package:waste_none_app/app/models/product.dart';
@@ -45,9 +47,8 @@ class FlutterNotification implements NotificationBase {
     // await Navigator.push(
     //   context,
     //   MaterialPageRoute<void>(
-    //       builder: (context) => LandingSemaphorePage(
-    //             auth: WNFirebaseAuth(),
-    //             db: WNFirebaseDB(),
+    //       builder: (context) => FridgePage(
+    //
     //           )),
     // );
   }
@@ -65,39 +66,57 @@ class FlutterNotification implements NotificationBase {
   }
 
   Future<void> addExpiryNotification(WasteNoneUser user, Product product, FridgeItem fridgeItem) async {
-    DateTime expiryDate = fridgeItem.getValidDateAsDate();
-
-    double _notifyAtForWidget = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid), 8);
-    double _notifyDaysBefore = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_DAYS, user.uid), 2);
-    int notifDayOfTheMonth = expiryDate.day - _notifyDaysBefore.toInt();
-
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, notifDayOfTheMonth, _notifyAtForWidget.toInt());
-    // debug +1 minute:
-    //tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, now.hour, now.minute + 1);
+    DateTime itemExpiryDate = fridgeItem.getValidDateAsDate();
+    DateTime notifyAtDate = _calcScheduledDate(user, itemExpiryDate);
     List<PendingNotificationRequest> existingNotifications =
         await flutterLocalNotificationsPlugin.pendingNotificationRequests();
 
     bool foundNotificationOnThisDate = false;
     for (PendingNotificationRequest pendingNotification in existingNotifications) {
-      if (pendingNotification.id == _presentDateAsInt(expiryDate)) {
+      if (pendingNotification.id == _presentDateAsInt(itemExpiryDate)) {
         await flutterLocalNotificationsPlugin.cancel(pendingNotification.id);
         String newNotificationBody = '''
 ${pendingNotification.body} 
 ${product.name}''';
         int payload = int.parse(pendingNotification.payload);
-        scheduleExpiryNotification(newNotificationBody, expiryDate, scheduledDate, (++payload).toString());
+        scheduleExpiryNotification(newNotificationBody, itemExpiryDate, notifyAtDate, (++payload).toString());
         foundNotificationOnThisDate = true;
       }
     }
     if (!foundNotificationOnThisDate) {
-      if (scheduledDate.compareTo(now) < 1) {
+      if (notifyBeforeNow(notifyAtDate)) {
         // add scheduledDate to the first scheduled notif
       } else {
-        scheduleExpiryNotification(product.name, expiryDate, scheduledDate, '1');
+        scheduleExpiryNotification(product.name, itemExpiryDate, notifyAtDate, '1');
       }
     }
+  }
+
+  bool notifyBeforeNow(DateTime notifyAtDate) => notifyAtDate.compareTo(tz.TZDateTime.now(tz.local)) < 1;
+
+  DateTime _calcScheduledDate(WasteNoneUser user, DateTime itemExpiryDate) {
+    double _notifyDaysBefore = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_DAYS, user.uid), 2);
+    int notifyDayOfTheMonth = itemExpiryDate.day > _notifyDaysBefore.toInt()
+        ? itemExpiryDate.day - _notifyDaysBefore.toInt()
+        : DateUtil().daysInMonth(_prevMonth(itemExpiryDate.month), itemExpiryDate.year) -
+            (_notifyDaysBefore.toInt() - itemExpiryDate.day);
+
+    int notifyMonth =
+        itemExpiryDate.day > _notifyDaysBefore.toInt() ? itemExpiryDate.month : _prevMonth(itemExpiryDate.month);
+    double _notifyAtForWidget = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_HRS, user.uid), 8);
+    double _notifyAtMinForWidget = Settings.getValue(getSettingsKey(SettingsKeysEnum.NOTIFY_EXPIRY_MIN, user.uid), 0);
+
+    print('schedule notif on mm:$notifyMonth dd:$notifyDayOfTheMonth at $_notifyAtForWidget');
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    // tz.TZDateTime scheduledDate =
+    // tz.TZDateTime(tz.local, now.year, notifyMonth, notifyDayOfTheMonth, _notifyAtForWidget.toInt(),_notifyAtMinForWidget.toInt());
+    // debug +1 minute:
+    return tz.TZDateTime(tz.local, now.year, notifyMonth, notifyDayOfTheMonth, _notifyAtForWidget.toInt(),
+        _notifyAtMinForWidget.toInt());
+  }
+
+  _prevMonth(int month) {
+    return month > 1 ? month - 1 : 12;
   }
 
   Future<void> removeNotification(Product product, FridgeItem fridgeItem) async {
@@ -142,7 +161,6 @@ ${product.name}''';
       ),
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
       payload: payload,
     );
   }
