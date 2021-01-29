@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "1066113129918",
+    "project_id": "wastenone-fridge-app",
+    "storage_bucket": "wastenone-fridge-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066113129918:android:74efe117ceaef6b8052def",
+        "android_client_info": {
+          "package_name": "com.corecode.wastenone_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1066113129918-fm56sc0m6qr4galbsse4o2sf3lv1ns4r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.corecode.wastenone_app",
+            "certificate_hash": "45ba22255148946e4ac3f5bd2287cf2f3bb52fc7"
+          }
+        },
+        {
+          "client_id": "1066113129918-ik5khqeo7ov3cjmul6opjpj2jfr60aop.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.corecode.wastenone_app",
+            "certificate_hash": "d0b7be595af471770c961719c20ea2b9e83d7fee"
+          }
+        },
+        {
+          "client_id": "1066113129918-p8r1p2qa5fjqq4r8culionb1tuhgv16i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.corecode.wastenone_app",
+            "certificate_hash": "abd5166423c01dd86a05210dd98c76c34b81b34a"
+          }
+        },
+        {
+          "client_id": "1066113129918-o6f8421uvkaclb383637ul5r0vondda2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkf_dbg-Y5R3gXoy9qv9hQbOZnoUOM1nE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1066113129918-o6f8421uvkaclb383637ul5r0vondda2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
